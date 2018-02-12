@@ -3,10 +3,15 @@ a [PyTorch](http://pytorch.org/) Framework for Developing Memory Efficient Deep 
 
 ## Requirements
 * [PyTorch](http://pytorch.org/) 0.3 (CUDA support recommended)
-* torchvision
-* TensorboardX
+* [torchvision](https://github.com/pytorch/vision) 0.1.9
+* [TensorboardX](https://github.com/lanpa/tensorboard-pytorch) 0.9
 
 ## Installation
+
+```bash
+git clone git@github.com:silvandeleemput/memcnn.git
+cd ./memcnn
+```
 
 ## Run PyTorch Experiments
 ```bash
