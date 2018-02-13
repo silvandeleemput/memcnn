@@ -24,7 +24,7 @@ The datasets and experimental results will be put inside the created docker cont
 `\home\user\data` and `\home\user\experiments` respectively
 
 
-### Custom environment
+### Using a Custom environment
 #### Requirements
 * [PyTorch](http://pytorch.org/) 0.3 (CUDA support recommended)
 * [torchvision](https://github.com/pytorch/vision) 0.1.9
