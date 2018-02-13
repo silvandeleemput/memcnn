@@ -9,8 +9,8 @@ from memcnn.data.sampling import NSamplesRandomSampler
 
 def get_cifar_data_loaders(dataset, data_dir, max_epoch, batch_size, workers):
 
-    train_set = dataset(root=data_dir, train=True)
-    valid_set = dataset(root=data_dir, train=False)
+    train_set = dataset(root=data_dir, train=True, download=True)
+    valid_set = dataset(root=data_dir, train=False, download=True)
 
     # calculate mean subtraction img...
     mean_img = np.concatenate((train_set.train_data, valid_set.test_data), axis=0).mean(axis=0)
