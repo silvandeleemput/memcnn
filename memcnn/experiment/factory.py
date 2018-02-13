@@ -1,6 +1,10 @@
 import json
 import copy
-from app.utils.dynamic import get_attr_from_module
+
+def get_attr_from_module(pclass):
+    pclass = pclass.rsplit(".", 1)
+    mod = __import__(pclass[0], fromlist=[str(pclass[1])])
+    return getattr(mod, pclass[1])
 
 def load_experiment_config(experiments_file, experiment_tags):
     with open(experiments_file, 'r') as f:

@@ -73,7 +73,7 @@ RUN pip install git+https://github.com/lanpa/tensorboard-pytorch
 WORKDIR /home/user
 RUN mkdir data
 RUN mkdir experiments
-RUN git clone git@github.com:silvandeleemput/memcnn.git
+RUN git clone https://github.com/silvandeleemput/memcnn.git
 RUN mv /home/user/memcnn/memcnn/config/config.json.example /home/user/memcnn/memcnn/config/config.json
 
 ENV PYTHONPATH $PYTHONPATH:/home/user/memcnn:/home/user/memcnn/memcnn
