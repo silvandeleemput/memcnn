@@ -1,0 +1,96 @@
+{
+    "resnet32":
+    {
+        "data_loader_params": {
+            "batch_size": 100,
+            "max_epoch": 80000
+        },
+        "model": "memcnn.models.resnet.ResNet",
+        "model_params": {
+            "block":"memcnn.models.resnet.BasicBlock",
+            "layers":[5, 5, 5],
+            "channels_per_layer":[16,16,32,64],
+            "strides":[1, 1, 2, 2],
+            "init_max_pool":false,
+            "init_kernel_size":3,
+            "batch_norm_fix":false
+        },
+        "optimizer": "torch.optim.SGD",
+        "optimizer_params": {
+            "lr":0.1,
+            "momentum":0.9,
+            "weight_decay":2e-4
+        },
+        "trainer":"memcnn.trainers.classification.train",
+        "trainer_params":{
+            "loss":"memcnn.utils.loss.CrossEntropyLossTF"
+        }
+    },
+
+    "resnet110":
+    {
+        "base": "resnet32",
+        "model_params": {
+            "layers":[18, 18, 18]
+        }
+    },
+
+    "resnet164":
+    {
+        "base": "resnet110",
+        "model_params": {
+            "block":"memcnn.models.resnet.Bottleneck"
+        }
+    },
+
+    "revnet38":
+    {
+        "base": "resnet32",
+        "model_params": {
+            "layers":[3, 3, 3],
+            "channels_per_layer":[32,32,64,112],
+            "block":"memcnn.models.resnet.RevBasicBlock"
+        }
+    },
+
+    "revnet110":
+    {
+        "base": "revnet38",
+        "model_params": {
+            "layers":[9, 9, 9],
+            "channels_per_layer":[32,32,64,128]
+        }
+    },
+
+    "revnet164":
+    {
+        "base": "revnet110",
+        "model_params": {
+            "block":"memcnn.models.resnet.RevBottleneck"
+        }
+    },
+
+    "cifar10":
+    {
+        "data_loader": "memcnn.data.cifar.get_cifar_data_loaders",
+        "data_loader_params": {
+            "dataset": "torchvision.datasets.CIFAR10",
+            "workers": 16
+        },
+        "model_params": {
+            "num_classes":10
+        }
+    },
+
+    "cifar100":
+    {
+        "data_loader": "memcnn.data.cifar.get_cifar_data_loaders",
+        "data_loader_params": {
+            "dataset": "torchvision.datasets.CIFAR100",
+            "workers": 16
+        },
+        "model_params": {
+            "num_classes":100
+        }
+    }
+}
