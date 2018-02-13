@@ -1,24 +1,52 @@
 # MemCNN 
 a [PyTorch](http://pytorch.org/) Framework for Developing Memory Efficient Deep Invertible Networks
 
-## Requirements
+## Installation
+
+### Using NVIDIA docker
+#### Requirements
+* NVIDIA graphics card and the proper NVIDIA-drivers on your system
+* [nvidia-docker](https://github.com/nvidia/nvidia-docker) installed on your system
+
+The following bash commands will clone this repository and do a one-time build of the docker image with the right environment installed:
+```bash
+git clone git@github.com:silvandeleemput/memcnn.git
+docker build ./memcnn/docker --tag=memcnn-docker
+```
+
+After the one-time install on your machine, the docker can be invoked by:
+```bash
+docker run --shm-size=4g --runtime=nvidia -it memcnn-docker
+```
+This will open a preconfigured bash shell, which is correctly configured to run the experiments from the next section.
+
+The datasets and experimental results will be put inside the created docker container under:
+`\home\user\data` and `\home\user\experiments` respectively
+
+
+### Custom environment
+#### Requirements
 * [PyTorch](http://pytorch.org/) 0.3 (CUDA support recommended)
 * [torchvision](https://github.com/pytorch/vision) 0.1.9
 * [TensorboardX](https://github.com/lanpa/tensorboard-pytorch) 0.9
 
-## Installation
-
+Clone the repository and navigate to the right folder to execute the experiments:
 ```bash
 git clone git@github.com:silvandeleemput/memcnn.git
-cd ./memcnn
+cd ./memcnn/memcnn
 ```
+Note that the location of the cloned repository has to be added to your Python path.
 
 ## Run PyTorch Experiments
 ```bash
 ./train.py [MODEL] [DATASET] --fresh
 ```
 Available values for `DATASET` are `cifar10` and `cifar100`.
+
 Available values for `MODEL` are `resnet32`, `resnet110`, `resnet164`, `revnet38`, `revnet110`, `revnet164`
+
+
+If not available datasets are automatically downloaded. 
 
 ## Results
 TensorFlow results were obtained from [the reversible residual network](https://arxiv.org/abs/1707.04585)
