@@ -10,7 +10,7 @@ a [PyTorch](http://pytorch.org/) Framework for Developing Memory Efficient Deep 
 
 The following bash commands will clone this repository and do a one-time build of the docker image with the right environment installed:
 ```bash
-git clone git@github.com:silvandeleemput/memcnn.git
+git clone https://github.com/silvandeleemput/memcnn.git
 docker build ./memcnn/docker --tag=memcnn-docker
 ```
 
@@ -32,7 +32,7 @@ The datasets and experimental results will be put inside the created docker cont
 
 Clone the repository and navigate to the right folder to execute the experiments:
 ```bash
-git clone git@github.com:silvandeleemput/memcnn.git
+git clone https://github.com/silvandeleemput/memcnn.git
 cd ./memcnn/memcnn
 ```
 Note that the location of the cloned repository has to be added to your Python path.
