@@ -1,6 +1,10 @@
 # MemCNN 
 a [PyTorch](http://pytorch.org/) Framework for Developing Memory Efficient Deep Invertible Networks
 
+## Licencing
+
+For now, this repository comes without a license, which implies nobody has the right to use, copy, distribute or modify this work. However, the authors permit use for reviewing purposes. In the near future the authors intend to add a liberal MIT or Apache license.
+
 ## Installation
 
 ### Using NVIDIA docker
