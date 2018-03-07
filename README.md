@@ -1,9 +1,9 @@
-# MemCNN 
+# MemCNN
 a [PyTorch](http://pytorch.org/) Framework for Developing Memory Efficient Deep Invertible Networks
 
 ## Licencing
 
-For now, this repository comes without a license, which implies nobody has the right to use, copy, distribute or modify this work. However, the authors permit use for reviewing purposes. In the near future the authors intend to add a liberal MIT or Apache license.
+This repository comes with the MIT license, which implies everyone has the right to use, copy, distribute and/or modify this work. If you do, please cite our work.
 
 ## Installation
 
@@ -50,11 +50,11 @@ Available values for `DATASET` are `cifar10` and `cifar100`.
 Available values for `MODEL` are `resnet32`, `resnet110`, `resnet164`, `revnet38`, `revnet110`, `revnet164`
 
 
-If not available datasets are automatically downloaded. 
+If not available datasets are automatically downloaded.
 
 ## Results
 TensorFlow results were obtained from [the reversible residual network](https://arxiv.org/abs/1707.04585)
-running the code from their [GitHub](https://github.com/renmengye/revnet-public). 
+running the code from their [GitHub](https://github.com/renmengye/revnet-public).
 
 <table>
 <tr><th>            </th><th colspan="4"> TensorFlow        </th><th colspan="4"> PyTorch     </th></tr>
