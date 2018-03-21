@@ -81,11 +81,11 @@ If you use our code, please cite:
 
 ```bibtex
 @inproceedings{
-leemput2018memcnn,
-title={MemCNN: a Framework for Developing Memory Efficient Deep Invertible Networks},
-author={Sil C. van de Leemput, Jonas Teuwen, Rashindra Manniesing},
-booktitle={International Conference on Learning Representations},
-year={2018},
-url={https://openreview.net/forum?id=r1KzqK1wz},
+  leemput2018memcnn,
+  title={MemCNN: a Framework for Developing Memory Efficient Deep Invertible Networks},
+  author={Sil C. van de Leemput, Jonas Teuwen, Rashindra Manniesing},
+  booktitle={International Conference on Learning Representations},
+  year={2018},
+  url={https://openreview.net/forum?id=r1KzqK1wz},
 }
 ```
