@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
-import numpy as np
 import copy
-import math
+
 
 class ReversibleBlock(nn.Module):
     def __init__(self, Fm, Gm=None, implementation=0, keep_input=False):
@@ -26,7 +24,8 @@ class ReversibleBlock(nn.Module):
         elif self.implementation == 1:
             out = ReversibleBlockFunction2.apply(*args)
         else:
-            raise NotImplementedError("Selected implementation ({}) not implemented...".format(self.implementation))
+            raise NotImplementedError("Selected implementation ({}) not implemented..."
+                                      .format(self.implementation))
 
         # Clears the input data as it can be reversed on the backward pass
         if not self.keep_input:
@@ -34,8 +33,26 @@ class ReversibleBlock(nn.Module):
 
         return out
 
-class ReversibleBlockFunction(torch.autograd.Function):
+    def inverse(self, y):
+        if self.implementation == 0 or self.implementation == 1:
+            assert (y.shape[1] % 2 == 0)  # assert if possible
 
+            # partition in two equally sized set of channels
+            y1, y2 = torch.chunk(y, 2, dim=1)
+            y1, y2 = y1.contiguous(), y2.contiguous()
+
+            # compute inputs from outputs
+            x2 = y2 - self.Gm.forward(y1)
+            x1 = y1 - self.Fm.forward(x2)
+
+            x = torch.cat([x1, x2], dim=1)
+        else:
+            raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
+                                      .format(self.implementation))
+        return x
+
+
+class ReversibleBlockFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, Fm, Gm, *weights):
         """Forward pass for the reversible block computes:
@@ -65,9 +82,8 @@ class ReversibleBlockFunction(torch.autograd.Function):
         """
         # check if possible to partition into two equally sized partitions
         assert(x.shape[1] % 2 == 0) # assert if possible
-        partition = x.shape[1] / 2
 
-        # store partition size, Fm and Gm functions in context
+        # store Fm and Gm functions in context
         ctx.Fm = Fm
         ctx.Gm = Gm
 
@@ -97,7 +113,6 @@ class ReversibleBlockFunction(torch.autograd.Function):
 
         return output
 
-
     @staticmethod
     def backward(ctx, grad_output):
 
@@ -107,22 +122,18 @@ class ReversibleBlockFunction(torch.autograd.Function):
         y1, y2 = Variable.chunk(output, 2, dim=1)
         y1, y2 = y1.contiguous(), y2.contiguous()
 
-        # partition output gradient also on channels
+        # check if output gradients can be partitioned on channels
         assert(grad_output.data.shape[1] % 2 == 0)
-        y1_grad, y2_grad = Variable.chunk(grad_output, 2, dim=1)
-        y1_grad, y2_grad = y1_grad.contiguous(), y2_grad.contiguous()
 
         # Recreate computation graphs for functions Gm and Fm with gradient collecting leaf nodes:
         # z1_stop, x2_stop, GW, FW
         # Also recompute inputs (x1, x2) from outputs (y1, y2)
         z1_stop = Variable(y1.data, requires_grad=True)
 
-        GWeights = [p for p in Gm.parameters()]
         G_z1 = Gm.forward(z1_stop)
         x2 = y2 - G_z1
         x2_stop = Variable(x2.data, requires_grad=True)
 
-        FWeights = [p for p in Fm.parameters()]
         F_x2 = Fm.forward(x2_stop)
         x1 = y1 - F_x2
         x1_stop = Variable(x1.data, requires_grad=True)
@@ -135,6 +146,7 @@ class ReversibleBlockFunction(torch.autograd.Function):
         # Perform full backward pass on graph...
         y = torch.cat([y1_, y2_], dim=1)
         dd = torch.autograd.grad(y, (x1_stop, x2_stop) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output, retain_graph=False)
+        GWeights = [p for p in Gm.parameters()]
         GWgrads = dd[2:2+len(GWeights)]
         FWgrads = dd[2+len(GWeights):]
         x2_grad = dd[1]
@@ -152,7 +164,6 @@ class ReversibleBlockFunction(torch.autograd.Function):
 
 
 class ReversibleBlockFunction2(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx, x, Fm, Gm, *weights):
         """Forward pass for the reversible block computes:
@@ -182,7 +193,6 @@ class ReversibleBlockFunction2(torch.autograd.Function):
         """
         # check if possible to partition into two equally sized partitions
         assert(x.shape[1] % 2 == 0) # assert if possible
-        partition = x.shape[1] / 2
 
         # store partition size, Fm and Gm functions in context
         ctx.Fm = Fm
@@ -215,7 +225,6 @@ class ReversibleBlockFunction2(torch.autograd.Function):
 
         return output
 
-
     @staticmethod
     def backward(ctx, grad_output):
 
@@ -236,12 +245,10 @@ class ReversibleBlockFunction2(torch.autograd.Function):
 
         z1_stop = Variable(y1.data, requires_grad=True)
 
-        GWeights = [p for p in Gm.parameters()]
         G_z1 = Gm.forward(z1_stop)
         x2 = y2 - G_z1
         x2_stop = Variable(x2.data, requires_grad=True)
 
-        FWeights = [p for p in Fm.parameters()]
         F_x2 = Fm.forward(x2_stop)
         x1 = y1 - F_x2
         x1_stop = Variable(x1.data, requires_grad=True)
@@ -256,7 +263,7 @@ class ReversibleBlockFunction2(torch.autograd.Function):
         z1_grad = dd[0] + y1_grad
         GWgrads = dd[1:]
 
-        dd = torch.autograd.grad(y1_, (x1_stop, x2_stop) + tuple(Fm.parameters()), y2_grad, retain_graph=False)
+        dd = torch.autograd.grad(y1_, (x1_stop, x2_stop) + tuple(Fm.parameters()), z1_grad, retain_graph=False)
 
         FWgrads = dd[2:]
         x2_grad = dd[1] + y2_grad
