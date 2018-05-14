@@ -58,6 +58,22 @@ class ReversibleOperationsTestCase(unittest.TestCase):
         for i in range(0, len(implementations) - 1, 2):
             self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
 
+    def test_revblock_inverse(self):
+        # define some data
+        X = Variable(torch.rand(2, 4, 5, 5))
+
+        # define an arbitrary reversible function
+        fn = revop.ReversibleBlock(torch.nn.Conv2d(2, 2, 3, padding=1), keep_input=False)
+
+        # compute output
+        Y = fn.forward(X.clone())
+
+        # compute input from output
+        X2 = fn.inverse(Y)
+
+        # check that the inverted output and the original input are approximately similar
+        self.assertTrue(np.allclose(X2.data.numpy(), X.data.numpy()))
+
 
 if __name__ == '__main__':
     unittest.main()
