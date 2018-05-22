@@ -1,2 +1,3 @@
 *.pyc
 /memcnn/config/config.json
+/.idea
