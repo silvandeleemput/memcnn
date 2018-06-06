@@ -131,19 +131,20 @@ class ReversibleBlockFunction(torch.autograd.Function):
         GWeights = [p for p in Gm.parameters()]
         x2 = y2 - Gm.forward(z1_stop)
         x1 = y1 - Fm.forward(x2)
-        x_stop = Variable(torch.cat([x1, x2], dim=1).data, requires_grad=True)
 
         # compute outputs building a sub-graph
-        x1_, x2_ = torch.chunk(x_stop, chunks=2, dim=1)
+        x1_ = Variable(x1.data, requires_grad=True)
+        x2_ = Variable(x2.data, requires_grad=True)
+
         y1_ = x1_ + Fm.forward(x2_)
         y2_ = x2_ + Gm.forward(y1_)
         y = torch.cat([y1_, y2_], dim=1)
 
         # perform full backward pass on graph...
-        dd = torch.autograd.grad(y, (x_stop, ) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output, retain_graph=False)
-        GWgrads = dd[1:1+len(GWeights)]
-        FWgrads = dd[1+len(GWeights):]
-        grad_input = dd[0]
+        dd = torch.autograd.grad(y, (x1_, x2_ ) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output, retain_graph=False)
+        GWgrads = dd[2:2+len(GWeights)]
+        FWgrads = dd[2+len(GWeights):]
+        grad_input = torch.cat([dd[0], dd[1]], dim=1)
 
         # cleanup sub-graph
         y1_.detach_()
@@ -151,7 +152,7 @@ class ReversibleBlockFunction(torch.autograd.Function):
         del y1_, y2_
 
         # restore input
-        x.data.set_(x_stop.data.contiguous())
+        x.data.set_(torch.cat([x1, x2], dim=1).data.contiguous())
         return (grad_input, None, None) + FWgrads + GWgrads
 
 

@@ -84,10 +84,11 @@ class ReversibleOperationsTestCase(unittest.TestCase):
 
 
     def test_normal_vs_revblock(self):
-        """ReversibleBlock test if similar gradients and weights results are obtained for
+        """ReversibleBlock test if similar gradients and weights results are obtained after similar training
 
         * test training the block for a single step and compare weights and grads for implementations 1 & 2
         * test against normal non Reversible Block function
+        * test if recreated input and produced output are contiguous
 
         """
         for implementation in range(2):
@@ -113,8 +114,9 @@ class ReversibleOperationsTestCase(unittest.TestCase):
                 e.train()
 
             # define an arbitrary reversible function and define graph for model 1
+            Xin = X.clone()
             fn = revop.ReversibleBlock(c1_2, c2_2, keep_input=False, implementation=implementation)
-            Y = fn.forward(X.clone())
+            Y = fn.forward(Xin)
             loss2 = torch.mean(Y)
 
             # define the reversible function without custom backprop and define graph for model 2
@@ -147,6 +149,10 @@ class ReversibleOperationsTestCase(unittest.TestCase):
             # compute gradients and perform optimization model 1
             loss2.backward()
             optim2.step()
+
+            # input is contiguous tests
+            self.assertTrue(Xin.is_contiguous())
+            self.assertTrue(Y.is_contiguous())
 
             # weights are approximately the same after training both models?
             self.assertTrue(np.allclose(c1.weight.data.numpy(), c1_2.weight.data.numpy()))
