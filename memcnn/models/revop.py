@@ -83,7 +83,7 @@ class ReversibleBlockFunction(torch.autograd.Function):
         # check if possible to partition into two equally sized partitions
         assert(x.shape[1] % 2 == 0) # assert if possible
 
-        # store Fm and Gm functions in context
+        # store partition size, Fm and Gm functions in context
         ctx.Fm = Fm
         ctx.Gm = Gm
 
@@ -108,58 +108,50 @@ class ReversibleBlockFunction(torch.autograd.Function):
         y2.set_()
         del y1, y2
 
-        # save the input and output variables
+        # save the (empty) input and (non-empty) output variables
         ctx.save_for_backward(x, output)
 
         return output
 
     @staticmethod
     def backward(ctx, grad_output):
-
+        # retrieve weight references
         Fm, Gm = ctx.Fm, ctx.Gm
-        # are all variable objects now
-        x, output = ctx.saved_variables #[0]
-        y1, y2 = Variable.chunk(output, 2, dim=1)
+
+        # retrieve input and output references
+        x, output = ctx.saved_variables
+        y1, y2 = torch.chunk(output, 2, dim=1)
         y1, y2 = y1.contiguous(), y2.contiguous()
 
-        # check if output gradients can be partitioned on channels
+        # partition output gradient also on channels
         assert(grad_output.data.shape[1] % 2 == 0)
 
-        # Recreate computation graphs for functions Gm and Fm with gradient collecting leaf nodes:
-        # z1_stop, x2_stop, GW, FW
-        # Also recompute inputs (x1, x2) from outputs (y1, y2)
+        # recompute x
         z1_stop = Variable(y1.data, requires_grad=True)
-
-        G_z1 = Gm.forward(z1_stop)
-        x2 = y2 - G_z1
-        x2_stop = Variable(x2.data, requires_grad=True)
-
-        F_x2 = Fm.forward(x2_stop)
-        x1 = y1 - F_x2
-        x1_stop = Variable(x1.data, requires_grad=True)
-
-        # Compute outputs building a sub-graph
-        z1 = x1_stop + F_x2
-        y2_ = x2_stop + G_z1
-        y1_ = z1
-
-        # Perform full backward pass on graph...
-        y = torch.cat([y1_, y2_], dim=1)
-        dd = torch.autograd.grad(y, (x1_stop, x2_stop) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output, retain_graph=False)
         GWeights = [p for p in Gm.parameters()]
-        GWgrads = dd[2:2+len(GWeights)]
-        FWgrads = dd[2+len(GWeights):]
-        x2_grad = dd[1]
-        x1_grad = dd[0]
+        x2 = y2 - Gm.forward(z1_stop)
+        x1 = y1 - Fm.forward(x2)
+        x_stop = Variable(torch.cat([x1, x2], dim=1).data, requires_grad=True)
 
-        grad_input = torch.cat([x1_grad, x2_grad], dim=1)
+        # compute outputs building a sub-graph
+        x1_, x2_ = torch.chunk(x_stop, chunks=2, dim=1)
+        y1_ = x1_ + Fm.forward(x2_)
+        y2_ = x2_ + Gm.forward(y1_)
+        y = torch.cat([y1_, y2_], dim=1)
 
+        # perform full backward pass on graph...
+        dd = torch.autograd.grad(y, (x_stop, ) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output, retain_graph=False)
+        GWgrads = dd[1:1+len(GWeights)]
+        FWgrads = dd[1+len(GWeights):]
+        grad_input = dd[0]
+
+        # cleanup sub-graph
         y1_.detach_()
         y2_.detach_()
         del y1_, y2_
 
         # restore input
-        x.data.set_(torch.cat([x1.data, x2.data], dim=1).contiguous())
+        x.data.set_(x_stop.data.contiguous())
         return (grad_input, None, None) + FWgrads + GWgrads
 
 
