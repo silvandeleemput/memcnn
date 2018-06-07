@@ -9,7 +9,8 @@ import warnings
 warnings.filterwarnings(action='ignore', category=UserWarning)
 
 
-use_context_mans = int(torch.__version__[0]) * 100 + int(torch.__version__[2]) > 3
+use_context_mans = int(torch.__version__[0]) * 100 + int(torch.__version__[2]) - \
+                   (1 if 'a' in torch.__version__ else 0) > 3
 
 
 @contextmanager
@@ -22,7 +23,26 @@ def set_grad_enabled(grad_mode):
 
 
 class ReversibleBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation=0, keep_input=False):
+    def __init__(self, Fm, Gm=None, implementation=1, keep_input=False):
+        """The ReversibleBlock
+
+        Parameters
+        ----------
+            Fm : torch.nn.Module
+                A torch.nn.Module encapsulating an arbitrary function
+
+            Gm : torch.nn.Module
+                A torch.nn.Module encapsulating an arbitrary function
+                (If not specified a deepcopy of Gm is used as a Module)
+
+            implementation : int
+                Switch between different Reversible Operation implementations. Default = 1
+
+            keep_input : bool
+                Retain the input information, by default it can be discarded since it will be
+                reconstructed upon the backward pass.
+
+        """
         super(ReversibleBlock, self).__init__()
         # mirror the passed module, without parameter sharing...
         if Gm is None:
