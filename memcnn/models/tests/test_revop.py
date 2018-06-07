@@ -39,7 +39,7 @@ class ReversibleOperationsTestCase(unittest.TestCase):
             Xinv = rb.inverse(Y)
             loss = torch.nn.MSELoss()(Y, Ytarget)
 
-            self.assertTrue(len(X.data.shape) == 0)
+            self.assertTrue(len(X.data.shape) == 0 or (len(X.data.shape) == 1 and X.data.shape[0] == 0))
 
             optim.zero_grad()
             loss.backward()

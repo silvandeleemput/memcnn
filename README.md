@@ -32,7 +32,7 @@ The datasets and experimental results will be put inside the created docker cont
 
 ### Using a Custom environment
 #### Requirements
-* [PyTorch](http://pytorch.org/) 0.3 (CUDA support recommended)
+* [PyTorch](http://pytorch.org/) 0.4 (0.3 downwards compatible, CUDA support recommended)
 * [torchvision](https://github.com/pytorch/vision) 0.1.9
 * [TensorboardX](https://github.com/lanpa/tensorboard-pytorch) 0.9
 
