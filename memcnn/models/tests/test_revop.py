@@ -6,6 +6,7 @@ import memcnn.models.revop as revop
 import numpy as np
 import copy
 
+
 class ReversibleOperationsTestCase(unittest.TestCase):
     def test_reversible_block(self):
         """ReversibleBlock test
@@ -13,51 +14,67 @@ class ReversibleOperationsTestCase(unittest.TestCase):
         * test inversion Y = RB(X) and X = RB.inverse(Y)
         * test training the block for a single step and compare weights for implementations 1 & 2
         * test automatic discard of input X and its retrieval after the backward pass
+        * test usage of BN to identify non-contiguous memory blocks
 
         """
         dims = (2, 10, 8, 8)
         data = np.random.random(dims).astype(np.float32)
         target_data = np.random.random(dims).astype(np.float32)
         impl_out, impl_grad = [], []
-        Gm = torch.nn.Conv2d(10 // 2, 10 // 2, (3, 3), padding=1)
+
+        class SubModule(torch.nn.Module):
+            def __init__(self):
+                super(SubModule, self).__init__()
+                self.bn = torch.nn.BatchNorm2d(10 // 2)
+                self.conv = torch.nn.Conv2d(10 // 2, 10 // 2, (3, 3), padding=1)
+
+            def forward(self, x):
+                return self.bn(self.conv(x))
+
+        Gm = SubModule()
+
         s_grad = [p.data.numpy().copy() for p in Gm.parameters()]
         implementations = [0, 0, 1, 1]
-        for implementation in implementations:
-            # same convolution test
-            X = Variable(torch.from_numpy(data.copy()))
-            Ytarget = Variable(torch.from_numpy(target_data.copy()))
-            Xshape = X.shape
-            Gm2 = copy.deepcopy(Gm)
-            rb = revop.ReversibleBlock(Gm2, implementation=implementation, keep_input=False)
-            rb.train()
-            rb.zero_grad()
+        for keep_input in [False, True]:
+            for implementation in implementations:
+                # same convolution test
+                X = Variable(torch.from_numpy(data.copy()))
+                Ytarget = Variable(torch.from_numpy(target_data.copy()))
+                Xshape = X.shape
+                Gm2 = copy.deepcopy(Gm)
+                rb = revop.ReversibleBlock(Gm2, implementation=implementation, keep_input=keep_input)
+                rb.train()
+                rb.zero_grad()
 
-            optim = torch.optim.RMSprop(rb.parameters())
-            optim.zero_grad()
+                optim = torch.optim.RMSprop(rb.parameters())
+                optim.zero_grad()
 
-            Y = rb(X)
-            Xinv = rb.inverse(Y)
-            loss = torch.nn.MSELoss()(Y, Ytarget)
+                Y = rb(X)
+                Xinv = rb.inverse(Y)
+                loss = torch.nn.MSELoss()(Y, Ytarget)
 
-            self.assertTrue(len(X.data.shape) == 0 or (len(X.data.shape) == 1 and X.data.shape[0] == 0))
+                # has input been retained/discarded after forward pass?
+                if keep_input:
+                    self.assertTrue(X.data.shape == Xshape)
+                else:
+                    self.assertTrue(len(X.data.shape) == 0 or (len(X.data.shape) == 1 and X.data.shape[0] == 0))
 
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
 
-            self.assertTrue(Y.shape == Xshape)
-            self.assertTrue(X.data.numpy().shape == data.shape)
-            self.assertTrue(np.allclose(X.data.numpy(), data, atol=1e-06))
-            self.assertTrue(np.allclose(X.data.numpy(), Xinv.data.numpy()))
-            impl_out.append(Y.data.numpy().copy())
-            impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
-            self.assertFalse(np.allclose(impl_grad[-1][0], s_grad[0]))
+                self.assertTrue(Y.shape == Xshape)
+                self.assertTrue(X.data.numpy().shape == data.shape)
+                self.assertTrue(np.allclose(X.data.numpy(), data, atol=1e-06))
+                self.assertTrue(np.allclose(X.data.numpy(), Xinv.data.numpy()))
+                impl_out.append(Y.data.numpy().copy())
+                impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
+                self.assertFalse(np.allclose(impl_grad[-1][0], s_grad[0]))
 
-        # output and gradients per implementation similar ?
-        self.assertTrue(np.allclose(impl_out[0], impl_out[1]))
-        for i in range(0, len(implementations) - 1, 1):
-            self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
-
+            # output and gradients per implementation similar ?
+            self.assertTrue(np.allclose(impl_out[0], impl_out[1]))
+            for i in range(0, len(implementations) - 1, 1):
+                self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
 
     def test_revblock_inverse(self):
         """ReversibleBlock inverse test
@@ -81,7 +98,6 @@ class ReversibleOperationsTestCase(unittest.TestCase):
 
             # check that the inverted output and the original input are approximately similar
             self.assertTrue(np.allclose(X2.data.numpy(), X.data.numpy(), atol=1e-7))
-
 
     def test_normal_vs_revblock(self):
         """ReversibleBlock test if similar gradients and weights results are obtained after similar training
@@ -165,6 +181,76 @@ class ReversibleOperationsTestCase(unittest.TestCase):
             self.assertTrue(np.allclose(c2.weight.grad.data.numpy(), c2_2.weight.grad.data.numpy()))
             self.assertTrue(np.allclose(c1.bias.grad.data.numpy(), c1_2.bias.grad.data.numpy()))
             self.assertTrue(np.allclose(c2.bias.grad.data.numpy(), c2_2.bias.grad.data.numpy()))
+
+    @unittest.skipIf(not torch.cuda.is_available(), reason='This test requires a GPU to be available')
+    def test_memory_saving(self):
+        """Test memory saving of the reversible block
+
+        * tests fitting a large number of images by creating a very deep network requiring big
+          intermediate feature maps for training
+
+        * input size in bytes: np.prod((2, 10, 2000, 2000)) * 4 / (1024 ** 2)
+                                                      (approx.) = 305 MB
+
+        * tuned on a Titan X with 12 GB of RAM (depth=25 will just fit, but depth=250 will clearly not fit)
+          This will approximately require:
+            depth=25:  7629 MB
+            depth=250: 76293 MB
+
+        NOTE: This test assumes it is ran on a machine with a GPU with less than +/- 76293 MB
+        NOTE: This test can be quite slow to execute
+
+        """
+        dims = (2, 10, 2000, 2000)
+        data = np.random.random(dims).astype(np.float32)
+        target_data = np.random.random(dims).astype(np.float32)
+
+        class SubModule(torch.nn.Module):
+            def __init__(self):
+                super(SubModule, self).__init__()
+                self.bn = torch.nn.BatchNorm2d(10 // 2)
+                self.conv = torch.nn.Conv2d(10 // 2, 10 // 2, (3, 3), padding=1)
+
+            def forward(self, x):
+                return self.bn(self.conv(x))
+
+        class SubModuleStack(torch.nn.Module):
+            def __init__(self, Gm, depth=10, implementation=1, keep_input=False):
+                super(SubModuleStack, self).__init__()
+                self.stack = torch.nn.Sequential(
+                    *[revop.ReversibleBlock(Gm, Gm, implementation=implementation, keep_input=keep_input) for _ in range(depth)]
+                )
+
+            def forward(self, x):
+                return self.stack(x)
+
+        for keep_input in [False, True]:
+            for implementation in [1]:
+                # same convolution test
+                X = Variable(torch.from_numpy(data.copy())).cuda()
+                Ytarget = Variable(torch.from_numpy(target_data.copy())).cuda()
+                network = SubModuleStack(SubModule(), depth=250, keep_input=keep_input, implementation=implementation)
+                network.cuda()
+                network.train()
+                network.zero_grad()
+                optim = torch.optim.RMSprop(network.parameters())
+                optim.zero_grad()
+                try:
+                    Y = network(X)
+                    loss = torch.nn.MSELoss()(Y, Ytarget)
+                    optim.zero_grad()
+                    loss.backward()
+                    optim.step()
+                    # Should not be reached when input is kept
+                    self.assertFalse(keep_input)
+                except RuntimeError:
+                    # Running out of memory should only happen when input is kept
+                    self.assertTrue(keep_input)
+                finally:
+                    del network
+                    del optim
+                    del X
+                    del Ytarget
 
 
 if __name__ == '__main__':
