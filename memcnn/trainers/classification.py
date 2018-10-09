@@ -1,15 +1,15 @@
 import os
 import time
 import logging
-import torch
-import torch.nn as nn
 from torch.autograd import Variable
 
 from memcnn.utils.stats import AverageMeter, accuracy
 
 from tensorboardX import SummaryWriter
 
+
 logger = logging.getLogger('trainer')
+
 
 def validate(model, ceriterion, val_loader, use_cuda):
     """validation sub-loop"""
@@ -67,6 +67,7 @@ def train(manager,
 
     # ensure train_loader enumerates to max_epoch
     #train_loader.sampler = NSamplesRandomSampler(train_loader.dataset, train_loader.sampler.nsamples - start_iter)
+    max_iterations = train_loader.sampler.nsamples // train_loader.batch_size
     train_loader.sampler.nsamples = train_loader.sampler.nsamples - start_iter
     for ind, (x, label) in enumerate(train_loader):
         iteration = ind + 1 + start_iter
@@ -101,7 +102,7 @@ def train(manager,
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'.format(
-                  iteration, len(train_loader), batch_time=batch_time,
+                  iteration, max_iterations, batch_time=batch_time,
                   data_time=data_time, loss=losses, top1=top1))
 
         if iteration % disp_iter == 0:

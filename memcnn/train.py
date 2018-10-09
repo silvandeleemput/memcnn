@@ -9,9 +9,12 @@ from memcnn.experiment.factory import load_experiment_config, experiment_config_
 
 import memcnn.utils.log
 
+
 logger = logging.getLogger('train')
 
-def run_experiment(experiment_tags, data_dir, results_dir, start_fresh=False, use_cuda=False, workers = None, experiments_file=None, *args, **kwargs):
+
+def run_experiment(experiment_tags, data_dir, results_dir, start_fresh=False, use_cuda=False, workers=None,
+                   experiments_file=None, *args, **kwargs):
     if not os.path.exists(data_dir):
         raise RuntimeError('Cannot find data_dir directory: {}'.format(data_dir))
 
@@ -31,7 +34,7 @@ def run_experiment(experiment_tags, data_dir, results_dir, start_fresh=False, us
     manager.make_dirs()
 
     if use_cuda:
-        model = model.cuda()
+        manager.model = manager.model.cuda()
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
 
@@ -60,19 +63,20 @@ def main():
     # parse arguments
     parser = argparse.ArgumentParser(description='Run memcnn experiments.')
     parser.add_argument('experiment_tags', type=str, nargs='+',
-        help='Experiment tags to run and combine from the experiment config file')
+                        help='Experiment tags to run and combine from the experiment config file')
     parser.add_argument('--workers', dest='workers', type=int, default=workers,
-        help='Number of workers for data loading (Default: {})'.format(workers))
+                        help='Number of workers for data loading (Default: {})'.format(workers))
     parser.add_argument('--results-dir', dest='results_dir', type=str, default=results_dir,
-        help='Directory for storing results (Default: {})'.format(results_dir))
+                        help='Directory for storing results (Default: {})'.format(results_dir))
     parser.add_argument('--data-dir', dest='data_dir', type=str, default=data_dir,
-        help='Directory for input data (Default: {})'.format(data_dir))
+                        help='Directory for input data (Default: {})'.format(data_dir))
     parser.add_argument('--experiments-file', dest='experiments_file', type=str, default=experiments_file,
-        help='Experiments file (Default: {})'.format(experiments_file))
+                        help='Experiments file (Default: {})'.format(experiments_file))
     parser.add_argument('--fresh', dest='start_fresh', action='store_true', default=start_fresh,
-        help='Start with fresh experiment, clears all previous results (Default: {})'.format(start_fresh))
+                        help='Start with fresh experiment, clears all previous results (Default: {})'
+                        .format(start_fresh))
     parser.add_argument('--no-cuda', dest='use_cuda', action='store_false', default=use_cuda,
-        help='Always disables GPU use (Default: use when available)')
+                        help='Always disables GPU use (Default: use when available)')
     args = parser.parse_args()
 
     if not use_cuda:
@@ -86,8 +90,8 @@ def main():
         args.experiment_tags,
         args.data_dir,
         args.results_dir,
-        start_fresh = args.start_fresh,
-        experiments_file = args.experiments_file,
+        start_fresh=args.start_fresh,
+        experiments_file=args.experiments_file,
         use_cuda=args.use_cuda, workers=args.workers)
 
 
