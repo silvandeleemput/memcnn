@@ -36,50 +36,52 @@ class ReversibleOperationsTestCase(unittest.TestCase):
         s_grad = [p.data.numpy().copy() for p in Gm.parameters()]
         implementations_fwd = [0, 0, 1, 1]
         implementations_bwd = [0, 0, 1, 1]
-        for keep_input in [False, True]:
-            for implementation_fwd in implementations_fwd:
-                for implementation_bwd in implementations_bwd:
-                    # same convolution test
-                    X = Variable(torch.from_numpy(data.copy()))
-                    Ytarget = Variable(torch.from_numpy(target_data.copy()))
-                    Xshape = X.shape
-                    Gm2 = copy.deepcopy(Gm)
-                    rb = revop.ReversibleBlock(Gm2, keep_input=keep_input,
-                                               implementation_fwd=implementation_fwd,
-                                               implementation_bwd=implementation_bwd)
-                    rb.train()
-                    rb.zero_grad()
+        for coupling in ['additive', 'affine']:
+            for keep_input in [False, True]:
+                for implementation_fwd in implementations_fwd:
+                    for implementation_bwd in implementations_bwd:
+                        # same convolution test
+                        X = Variable(torch.from_numpy(data.copy()))
+                        Ytarget = Variable(torch.from_numpy(target_data.copy()))
+                        Xshape = X.shape
+                        Gm2 = copy.deepcopy(Gm)
+                        rb = revop.ReversibleBlock(Gm2, coupling=coupling,
+                                                   keep_input=keep_input,
+                                                   implementation_fwd=implementation_fwd,
+                                                   implementation_bwd=implementation_bwd)
+                        rb.train()
+                        rb.zero_grad()
 
-                    optim = torch.optim.RMSprop(rb.parameters())
-                    optim.zero_grad()
+                        optim = torch.optim.RMSprop(rb.parameters())
+                        optim.zero_grad()
 
-                    Y = rb(X)
-                    Xinv = rb.inverse(Y.clone())
-                    loss = torch.nn.MSELoss()(Y, Ytarget)
+                        Y = rb(X)
+                        Xinv = rb.inverse(Y.clone())
+                        loss = torch.nn.MSELoss()(Y, Ytarget)
 
 
-                    # has input been retained/discarded after forward pass?
-                    if keep_input:
-                        self.assertTrue(X.data.shape == Xshape)
-                    else:
-                        self.assertTrue(len(X.data.shape) == 0 or (len(X.data.shape) == 1 and X.data.shape[0] == 0))
+                        # has input been retained/discarded after forward pass?
+                        if keep_input:
+                            self.assertTrue(X.data.shape == Xshape)
+                        else:
+                            self.assertTrue(len(X.data.shape) == 0 or (len(X.data.shape) == 1 and X.data.shape[0] == 0))
 
-                    optim.zero_grad()
-                    loss.backward()
-                    optim.step()
+                        optim.zero_grad()
+                        loss.backward()
+                        optim.step()
 
-                    self.assertTrue(Y.shape == Xshape)
-                    self.assertTrue(X.data.numpy().shape == data.shape)
-                    self.assertTrue(np.allclose(X.data.numpy(), data, atol=1e-06))
-                    self.assertTrue(np.allclose(X.data.numpy(), Xinv.data.numpy()))
-                    impl_out.append(Y.data.numpy().copy())
-                    impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
-                    self.assertFalse(np.allclose(impl_grad[-1][0], s_grad[0]))
+                        self.assertTrue(Y.shape == Xshape)
+                        self.assertTrue(X.data.numpy().shape == data.shape)
+                        self.assertTrue(np.allclose(X.data.numpy(), data, atol=1e-06))
+                        self.assertTrue(np.allclose(X.data.numpy(), Xinv.data.numpy()))
+                        impl_out.append(Y.data.numpy().copy())
+                        impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
+                        self.assertFalse(np.allclose(impl_grad[-1][0], s_grad[0]))
 
-            # output and gradients per implementation similar ?
-            self.assertTrue(np.allclose(impl_out[0], impl_out[1]))
-            for i in range(0, len(implementations_bwd) * len(implementations_fwd) - 1, 1):
-                    self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
+                # output and gradients per implementation similar ?
+                self.assertTrue(np.allclose(impl_out[0], impl_out[1]))
+                for i in range(0, len(implementations_bwd) * len(implementations_fwd) - 1, 1):
+                        self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
 
     def test_reversible_block_inv(self):
         """ReversibleBlock test using inverse training
@@ -109,49 +111,51 @@ class ReversibleOperationsTestCase(unittest.TestCase):
         s_grad = [p.data.numpy().copy() for p in Gm.parameters()]
         implementations_fwd = [0, 0, 1, 1]
         implementations_bwd = [0, 0, 1, 1]
-        for keep_input in [False, True]:
-            for implementation_fwd in implementations_fwd:
-                for implementation_bwd in implementations_bwd:
-                    # same convolution test
-                    Y = Variable(torch.from_numpy(data.copy()))
-                    Xtarget = Variable(torch.from_numpy(target_data.copy()))
-                    Yshape = Y.shape
-                    Gm2 = copy.deepcopy(Gm)
-                    rb = revop.ReversibleBlock(Gm2, keep_input=keep_input,
-                                               implementation_fwd=implementation_fwd,
-                                               implementation_bwd=implementation_bwd)
-                    rb.train()
-                    rb.zero_grad()
+        for coupling in ['additive', 'affine']:
+            for keep_input in [False, True]:
+                for implementation_fwd in implementations_fwd:
+                    for implementation_bwd in implementations_bwd:
+                        # same convolution test
+                        Y = Variable(torch.from_numpy(data.copy()))
+                        Xtarget = Variable(torch.from_numpy(target_data.copy()))
+                        Yshape = Y.shape
+                        Gm2 = copy.deepcopy(Gm)
+                        rb = revop.ReversibleBlock(Gm2, coupling=coupling,
+                                                   keep_input=keep_input,
+                                                   implementation_fwd=implementation_fwd,
+                                                   implementation_bwd=implementation_bwd)
+                        rb.train()
+                        rb.zero_grad()
 
-                    optim = torch.optim.RMSprop(rb.parameters())
-                    optim.zero_grad()
+                        optim = torch.optim.RMSprop(rb.parameters())
+                        optim.zero_grad()
 
-                    X = rb.inverse(Y)
-                    Yinv = rb(X.clone())
-                    loss = torch.nn.MSELoss()(X, Xtarget)
+                        X = rb.inverse(Y)
+                        Yinv = rb(X.clone())
+                        loss = torch.nn.MSELoss()(X, Xtarget)
 
-                    # has input been retained/discarded after forward pass?
-                    if keep_input:
-                        self.assertTrue(Y.data.shape == Yshape)
-                    else:
-                        self.assertTrue(len(Y.data.shape) == 0 or (len(Y.data.shape) == 1 and Y.data.shape[0] == 0))
+                        # has input been retained/discarded after forward pass?
+                        if keep_input:
+                            self.assertTrue(Y.data.shape == Yshape)
+                        else:
+                            self.assertTrue(len(Y.data.shape) == 0 or (len(Y.data.shape) == 1 and Y.data.shape[0] == 0))
 
-                    optim.zero_grad()
-                    loss.backward()
-                    optim.step()
+                        optim.zero_grad()
+                        loss.backward()
+                        optim.step()
 
-                    self.assertTrue(X.shape == Yshape)
-                    self.assertTrue(Y.data.numpy().shape == data.shape)
-                    self.assertTrue(np.allclose(Y.data.numpy(), data, atol=1e-06))
-                    self.assertTrue(np.allclose(Y.data.numpy(), Yinv.data.numpy()))
-                    impl_out.append(X.data.numpy().copy())
-                    impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
-                    self.assertFalse(np.allclose(impl_grad[-1][0], s_grad[0]))
+                        self.assertTrue(X.shape == Yshape)
+                        self.assertTrue(Y.data.numpy().shape == data.shape)
+                        self.assertTrue(np.allclose(Y.data.numpy(), data, atol=1e-06))
+                        self.assertTrue(np.allclose(Y.data.numpy(), Yinv.data.numpy()))
+                        impl_out.append(X.data.numpy().copy())
+                        impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
+                        self.assertFalse(np.allclose(impl_grad[-1][0], s_grad[0]))
 
-            # output and gradients per implementation similar ?
-            self.assertTrue(np.allclose(impl_out[0], impl_out[1]))
-            for i in range(0, len(implementations_bwd) * len(implementations_fwd) - 1, 1):
-                    self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
+                # output and gradients per implementation similar ?
+                self.assertTrue(np.allclose(impl_out[0], impl_out[1]))
+                for i in range(0, len(implementations_bwd) * len(implementations_fwd) - 1, 1):
+                        self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
 
 
     def test_normal_vs_revblock(self):
@@ -187,7 +191,9 @@ class ReversibleOperationsTestCase(unittest.TestCase):
 
                 # define an arbitrary reversible function and define graph for model 1
                 Xin = X.clone()
-                fn = revop.ReversibleBlock(c1_2, c2_2, keep_input=False,
+                # TODO: add normal test for affine coupling
+                fn = revop.ReversibleBlock(c1_2, c2_2, coupling='additive',
+                                           keep_input=False,
                                            implementation_fwd=implementation_fwd,
                                            implementation_bwd=implementation_bwd)
 
@@ -241,6 +247,7 @@ class ReversibleOperationsTestCase(unittest.TestCase):
                 self.assertTrue(np.allclose(c1.bias.grad.data.numpy(), c1_2.bias.grad.data.numpy()))
                 self.assertTrue(np.allclose(c2.bias.grad.data.numpy(), c2_2.bias.grad.data.numpy()))
 
+
     @unittest.skipIf(not torch.cuda.is_available(), reason='This test requires a GPU to be available')
     def test_memory_saving(self):
         """Test memory saving of the reversible block
@@ -274,45 +281,46 @@ class ReversibleOperationsTestCase(unittest.TestCase):
                 return self.bn(self.conv(x))
 
         class SubModuleStack(torch.nn.Module):
-            def __init__(self, Gm, depth=10, implementation_fwd=1, implementation_bwd=1, keep_input=False):
+            def __init__(self, Gm, coupling, depth=10, implementation_fwd=1, implementation_bwd=1, keep_input=False):
                 super(SubModuleStack, self).__init__()
                 self.stack = torch.nn.Sequential(
-                    *[revop.ReversibleBlock(Gm, Gm, keep_input=keep_input, implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd) for _ in range(depth)]
+                    *[revop.ReversibleBlock(Gm, Gm, coupling, keep_input=keep_input, implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd) for _ in range(depth)]
                 )
 
             def forward(self, x):
                 return self.stack(x)
 
-        for keep_input in [False, True]:
-            for implementation_fwd in [1]:
-                for implementation_bwd in [1]:
-                    # same convolution test
-                    X = Variable(torch.from_numpy(data.copy())).cuda()
-                    Ytarget = Variable(torch.from_numpy(target_data.copy())).cuda()
-                    network = SubModuleStack(SubModule(), depth=250, keep_input=keep_input,
-                                             implementation_fwd=implementation_fwd,
-                                             implementation_bwd=implementation_bwd)
-                    network.cuda()
-                    network.train()
-                    network.zero_grad()
-                    optim = torch.optim.RMSprop(network.parameters())
-                    optim.zero_grad()
-                    try:
-                        Y = network(X)
-                        loss = torch.nn.MSELoss()(Y, Ytarget)
+        for coupling in ['additive', 'affine']:
+            for keep_input in [False, True]:
+                for implementation_fwd in [1]:
+                    for implementation_bwd in [1]:
+                        # same convolution test
+                        X = Variable(torch.from_numpy(data.copy())).cuda()
+                        Ytarget = Variable(torch.from_numpy(target_data.copy())).cuda()
+                        network = SubModuleStack(SubModule(), coupling, depth=250, keep_input=keep_input,
+                                                 implementation_fwd=implementation_fwd,
+                                                 implementation_bwd=implementation_bwd)
+                        network.cuda()
+                        network.train()
+                        network.zero_grad()
+                        optim = torch.optim.RMSprop(network.parameters())
                         optim.zero_grad()
-                        loss.backward()
-                        optim.step()
-                        # Should not be reached when input is kept
-                        self.assertFalse(keep_input)
-                    except RuntimeError:
-                        # Running out of memory should only happen when input is kept
-                        self.assertTrue(keep_input)
-                    finally:
-                        del network
-                        del optim
-                        del X
-                        del Ytarget
+                        try:
+                            Y = network(X)
+                            loss = torch.nn.MSELoss()(Y, Ytarget)
+                            optim.zero_grad()
+                            loss.backward()
+                            optim.step()
+                            # Should not be reached when input is kept
+                            self.assertFalse(keep_input)
+                        except RuntimeError:
+                            # Running out of memory should only happen when input is kept
+                            self.assertTrue(keep_input)
+                        finally:
+                            del network
+                            del optim
+                            del X
+                            del Ytarget
 
 
 if __name__ == '__main__':
