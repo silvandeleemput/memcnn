@@ -48,12 +48,6 @@ class ReversibleBlock(nn.Module):
             implementation_bwd : int
                 Switch between different Operation implementations for backward training. Default = 1
 
-
-            Implementations:
-                0 = Memory-efficient/Accurate
-                1 = Memory-efficient/Fast
-                2 = Naive
-
         """
         super(ReversibleBlock, self).__init__()
 
@@ -100,10 +94,6 @@ class AdditiveBlock(nn.Module):
             implementation_bwd : int
                 Switch between different Additive Operation implementations for inverse pass. Default = 1
 
-            Implementations:
-                0 = Memory-efficient/Accurate
-                1 = Memory-efficient/Fast
-                2 = Naive
 
         """
         super(AdditiveBlock, self).__init__()
@@ -123,22 +113,6 @@ class AdditiveBlock(nn.Module):
             out = AdditiveBlockFunction.apply(*args)
         elif self.implementation_fwd == 1:
             out = AdditiveBlockFunction2.apply(*args)
-        elif self.implementation_fwd == 2:
-            assert (x.shape[1] % 2 == 0)  # assert if possible
-
-            # partition in two equally sized set of channels
-            x1, x2 = torch.chunk(x, 2, dim=1)
-            x1, x2 = x1.contiguous(), x2.contiguous()
-
-            # partition in two equally sized set of channels
-            x1, x2 = torch.chunk(x, 2, dim=1)
-            x1, x2 = x1.contiguous(), x2.contiguous()
-
-            # compute inputs from outputs
-            y1 = x1 + self.Fm.forward(x2)
-            y2 = x2 + self.Gm.forward(y1)
-
-            out = torch.cat([y1, y2], dim=1)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -156,25 +130,14 @@ class AdditiveBlock(nn.Module):
             x = AdditiveBlockInverseFunction.apply(*args)
         elif self.implementation_bwd == 1:
             x = AdditiveBlockInverseFunction2.apply(*args)
-        elif self.implementation_bwd == 2:
-            assert (y.shape[1] % 2 == 0)  # assert if possible
-
-            # partition in two equally sized set of channels
-            y1, y2 = torch.chunk(y, 2, dim=1)
-            y1, y2 = y1.contiguous(), y2.contiguous()
-
-            # partition in two equally sized set of channels
-            y1, y2 = torch.chunk(y, 2, dim=1)
-            y1, y2 = y1.contiguous(), y2.contiguous()
-
-            # compute inputs from outputs
-            x2 = y2 - self.Gm.forward(y1)
-            x1 = y1 - self.Fm.forward(x2)
-
-            x = torch.cat([x1, x2], dim=1)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))
+
+        # clears the input data as it can be reversed on the backward pass
+        if not self.keep_input:
+            y.data.set_()
+
         return x
 
 
@@ -209,10 +172,6 @@ class AffineBlock(nn.Module):
             implementation_bwd : int
                 Switch between different Additive Operation implementations for inverse pass. Default = 1
 
-            Implementations:
-                0 = Not yet implemented
-                1 = Not yet implemented
-                2 = Naive
 
         """
         super(AffineBlock, self).__init__()
@@ -322,21 +281,21 @@ class AdditiveBlockFunction(torch.autograd.Function):
         ctx.Fm = Fm
         ctx.Gm = Gm
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             # partition in two equally sized set of channels
             x1, x2 = torch.chunk(x, 2, dim=1)
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # compute outputs
             with warnings.catch_warnings():
-                x2var = Variable(x2, requires_grad=False, volatile=True)
+                x2var = Variable(x2)
             fmr = Fm.forward(x2var).data
 
             y1 = x1 + fmr
             x1.set_()
             del x1
             with warnings.catch_warnings():
-                y1var = Variable(y1, requires_grad=False, volatile=True)
+                y1var = Variable(y1)
             gmr = Gm.forward(y1var).data
             y2 = x2 + gmr
             x2.set_()
@@ -357,7 +316,7 @@ class AdditiveBlockFunction(torch.autograd.Function):
         Fm, Gm = ctx.Fm, ctx.Gm
 
         # retrieve input and output references
-        x, output = ctx.saved_variables
+        x, output = ctx.saved_tensors
         y1, y2 = torch.chunk(output, 2, dim=1)
         y1, y2 = y1.contiguous(), y2.contiguous()
 
@@ -436,21 +395,21 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
         cty.Fm = Fm
         cty.Gm = Gm
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             # partition in two equally sized set of channels
             y1, y2 = torch.chunk(y, 2, dim=1)
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # compute outputs
             with warnings.catch_warnings():
-                y1var = Variable(y1, requires_grad=False, volatile=True)
+                y1var = Variable(y1)
             gmr = Gm.forward(y1var).data
 
             x2 = y2 - gmr
             y2.set_()
             del y2
             with warnings.catch_warnings():
-                x2var = Variable(x2, requires_grad=False, volatile=True)
+                x2var = Variable(x2)
             fmr = Fm.forward(x2var).data
             x1 = y1 - fmr
             y1.set_()
@@ -471,7 +430,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
         Fm, Gm = cty.Fm, cty.Gm
 
         # retrieve input and output references
-        y, output = cty.saved_variables
+        y, output = cty.saved_tensors
         x1, x2 = torch.chunk(output, 2, dim=1)
         x1, x2 = x1.contiguous(), x2.contiguous()
 
@@ -550,21 +509,21 @@ class AdditiveBlockFunction2(torch.autograd.Function):
         ctx.Fm = Fm
         ctx.Gm = Gm
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             # partition in two equally sized set of channels
             x1, x2 = torch.chunk(x, 2, dim=1)
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # compute outputs
             with warnings.catch_warnings():
-                x2var = Variable(x2, requires_grad=False, volatile=True)
+                x2var = Variable(x2)
             fmr = Fm.forward(x2var).data
 
             y1 = x1 + fmr
             x1.set_()
             del x1
             with warnings.catch_warnings():
-                y1var = Variable(y1, requires_grad=False, volatile=True)
+                y1var = Variable(y1)
             gmr = Gm.forward(y1var).data
             y2 = x2 + gmr
             x2.set_()
@@ -585,7 +544,7 @@ class AdditiveBlockFunction2(torch.autograd.Function):
 
         Fm, Gm = ctx.Fm, ctx.Gm
         # are all variable objects now
-        x, output = ctx.saved_variables
+        x, output = ctx.saved_tensors
 
         with set_grad_enabled(False):
             y1, y2 = torch.chunk(output, 2, dim=1)
@@ -672,21 +631,21 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
         cty.Fm = Fm
         cty.Gm = Gm
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             # partition in two equally sized set of channels
             y1, y2 = torch.chunk(y, 2, dim=1)
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # compute outputs
             with warnings.catch_warnings():
-                y1var = Variable(y1, requires_grad=False, volatile=True)
+                y1var = Variable(y1)
             gmr = Gm.forward(y1var).data
 
             x2 = y2 - gmr
             y2.set_()
             del y2
             with warnings.catch_warnings():
-                x2var = Variable(x2, requires_grad=False, volatile=True)
+                x2var = Variable(x2)
             fmr = Fm.forward(x2var).data
             x1 = y1 - fmr
             y1.set_()
@@ -707,7 +666,7 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
         Fm, Gm = cty.Fm, cty.Gm
         # are all variable objects now
-        y, output = cty.saved_variables
+        y, output = cty.saved_tensors
 
         with set_grad_enabled(False):
             x1, x2 = torch.chunk(output, 2, dim=1)
