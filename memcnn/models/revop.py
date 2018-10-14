@@ -23,7 +23,7 @@ def set_grad_enabled(grad_mode):
 
 
 class ReversibleBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation=1, keep_input=False, implementation_inv=2):
+    def __init__(self, Fm, Gm=None, coupling='additive', keep_input=False, implementation_fwd=1, implementation_bwd=1):
         """The ReversibleBlock
 
         Parameters
@@ -35,35 +35,95 @@ class ReversibleBlock(nn.Module):
                 A torch.nn.Module encapsulating an arbitrary function
                 (If not specified a deepcopy of Gm is used as a Module)
 
-            implementation : int
-                Switch between different Reversible Operation implementations. Default = 1
-
-            implementation_inv : int
-                Switch between different Reversible Operation implementations for inverse pass. Default = 2
+            coupling: str
+                Type of coupling ['additive', 'affine']. Default = 'additive'
 
             keep_input : bool
                 Retain the input information, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
 
+            implementation_fwd : int
+                Switch between different Operation implementations for forward training. Default = 1
+
+            implementation_bwd : int
+                Switch between different Operation implementations for backward training. Default = 1
+
+
+            Implementations:
+                0 = Memory-efficient/Accurate
+                1 = Memory-efficient/Fast
+                2 = Naive
+
         """
         super(ReversibleBlock, self).__init__()
+
+        if coupling == 'additive':
+            self.rev_block = AdditiveBlock(Fm, Gm, keep_input, implementation_fwd, implementation_bwd)
+        elif coupling == 'affine':
+            self.rev_block = AffineBlock(Fm, Gm, keep_input, implementation_fwd, implementation_bwd)
+        else:
+            raise NotImplementedError('Unknown coupling method: %s' % coupling)
+
+    def forward(self, x):
+        return self.rev_block(x)
+
+    def inverse(self, y):
+        return self.rev_block.inverse(y)
+
+
+class AdditiveBlock(nn.Module):
+    def __init__(self, Fm, Gm=None, keep_input=False, implementation_fwd=1, implementation_bwd=1):
+        """The AdditiveBlock
+
+        Parameters
+        ----------
+            Fm : torch.nn.Module
+                A torch.nn.Module encapsulating an arbitrary function
+
+            Gm : torch.nn.Module
+                A torch.nn.Module encapsulating an arbitrary function
+                (If not specified a deepcopy of Gm is used as a Module)
+
+            implementation_fwd : int
+                Switch between different Additive Operation implementations for forward pass. Default = 1
+
+            implementation_bwd : int
+                Switch between different Additive Operation implementations for inverse pass. Default = 1
+
+            keep_input : bool
+                Retain the input information, by default it can be discarded since it will be
+                reconstructed upon the backward pass.
+
+            implementation_fwd : int
+                Switch between different Additive Operation implementations for forward pass. Default = 1
+
+            implementation_bwd : int
+                Switch between different Additive Operation implementations for inverse pass. Default = 1
+
+            Implementations:
+                0 = Memory-efficient/Accurate
+                1 = Memory-efficient/Fast
+                2 = Naive
+
+        """
+        super(AdditiveBlock, self).__init__()
         # mirror the passed module, without parameter sharing...
         if Gm is None:
             Gm = copy.deepcopy(Fm)
         self.Gm = Gm
         self.Fm = Fm
-        self.implementation = implementation
-        self.implementation_inv = implementation_inv
+        self.implementation_fwd = implementation_fwd
+        self.implementation_bwd = implementation_bwd
         self.keep_input = keep_input
 
     def forward(self, x):
         args = [x, self.Fm, self.Gm] + [w for w in self.Fm.parameters()] + [w for w in self.Gm.parameters()]
 
-        if self.implementation == 0:
-            out = ReversibleBlockFunction.apply(*args)
-        elif self.implementation == 1:
-            out = ReversibleBlockFunction2.apply(*args)
-        elif self.implementation == 2:
+        if self.implementation_fwd == 0:
+            out = AdditiveBlockFunction.apply(*args)
+        elif self.implementation_fwd == 1:
+            out = AdditiveBlockFunction2.apply(*args)
+        elif self.implementation_fwd == 2:
             assert (x.shape[1] % 2 == 0)  # assert if possible
 
             # partition in two equally sized set of channels
@@ -81,7 +141,7 @@ class ReversibleBlock(nn.Module):
             out = torch.cat([y1, y2], dim=1)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
-                                      .format(self.implementation))
+                                      .format(self.implementation_fwd))
 
         # clears the input data as it can be reversed on the backward pass
         if not self.keep_input:
@@ -92,11 +152,11 @@ class ReversibleBlock(nn.Module):
     def inverse(self, y):
         args = [y, self.Fm, self.Gm] + [w for w in self.Fm.parameters()] + [w for w in self.Gm.parameters()]
 
-        if self.implementation_inv == 0:
-            x = ReversibleBlockInverseFunction.apply(*args)
-        elif self.implementation_inv == 1:
-            x = ReversibleBlockInverseFunction2.apply(*args)
-        elif self.implementation_inv == 2:
+        if self.implementation_bwd == 0:
+            x = AdditiveBlockInverseFunction.apply(*args)
+        elif self.implementation_bwd == 1:
+            x = AdditiveBlockInverseFunction2.apply(*args)
+        elif self.implementation_bwd == 2:
             assert (y.shape[1] % 2 == 0)  # assert if possible
 
             # partition in two equally sized set of channels
@@ -114,11 +174,120 @@ class ReversibleBlock(nn.Module):
             x = torch.cat([x1, x2], dim=1)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
-                                      .format(self.implementation_inv))
+                                      .format(self.implementation_bwd))
         return x
 
 
-class ReversibleBlockFunction(torch.autograd.Function):
+
+
+class AffineBlock(nn.Module):
+    def __init__(self, Fm, Gm=None, keep_input=False, implementation_fwd=1, implementation_bwd=1):
+        """The AffineBlock
+
+        Parameters
+        ----------
+            Fm : torch.nn.Module
+                A torch.nn.Module encapsulating an arbitrary function
+
+            Gm : torch.nn.Module
+                A torch.nn.Module encapsulating an arbitrary function
+                (If not specified a deepcopy of Gm is used as a Module)
+
+            implementation_fwd : int
+                Switch between different Additive Operation implementations for forward pass. Default = 1
+
+            implementation_bwd : int
+                Switch between different Additive Operation implementations for inverse pass. Default = 1
+
+            keep_input : bool
+                Retain the input information, by default it can be discarded since it will be
+                reconstructed upon the backward pass.
+
+            implementation_fwd : int
+                Switch between different Additive Operation implementations for forward pass. Default = 1
+
+            implementation_bwd : int
+                Switch between different Additive Operation implementations for inverse pass. Default = 1
+
+            Implementations:
+                0 = Not yet implemented
+                1 = Not yet implemented
+                2 = Naive
+
+        """
+        super(AffineBlock, self).__init__()
+        # mirror the passed module, without parameter sharing...
+        if Gm is None:
+            Gm = copy.deepcopy(Fm)
+        self.Gm = Gm
+        self.Fm = Fm
+        self.implementation_fwd = implementation_fwd
+        self.implementation_bwd = implementation_bwd
+        self.keep_input = keep_input
+
+    def forward(self, x):
+        args = [x, self.Fm, self.Gm] + [w for w in self.Fm.parameters()] + [w for w in self.Gm.parameters()]
+
+        if self.implementation_fwd == 0:
+            raise NotImplementedError('Memory-efficient affine coupling is not yet implemented')
+        elif self.implementation_fwd == 1:
+            raise NotImplementedError('Memory-efficient affine coupling is not yet implemented')
+        elif self.implementation_fwd == 2:
+            assert (x.shape[1] % 2 == 0)  # assert if possible
+
+            # partition in two equally sized set of channels
+            x1, x2 = torch.chunk(x, 2, dim=1)
+            x1, x2 = x1.contiguous(), x2.contiguous()
+
+            # partition in two equally sized set of channels
+            x1, x2 = torch.chunk(x, 2, dim=1)
+            x1, x2 = x1.contiguous(), x2.contiguous()
+
+            # compute inputs from outputs
+            y1 = x1 + self.Fm.forward(x2)
+            y2 = x2 + self.Gm.forward(y1)
+
+            out = torch.cat([y1, y2], dim=1)
+        else:
+            raise NotImplementedError("Selected implementation ({}) not implemented..."
+                                      .format(self.implementation_fwd))
+
+        # clears the input data as it can be reversed on the backward pass
+        if not self.keep_input:
+            x.data.set_()
+
+        return out
+
+    def inverse(self, y):
+        args = [y, self.Fm, self.Gm] + [w for w in self.Fm.parameters()] + [w for w in self.Gm.parameters()]
+
+        if self.implementation_bwd == 0:
+            raise NotImplementedError('Memory-efficient affine coupling is not yet implemented')
+        elif self.implementation_bwd == 1:
+            raise NotImplementedError('Memory-efficient affine coupling is not yet implemented')
+        elif self.implementation_bwd == 2:
+            assert (y.shape[1] % 2 == 0)  # assert if possible
+
+            # partition in two equally sized set of channels
+            y1, y2 = torch.chunk(y, 2, dim=1)
+            y1, y2 = y1.contiguous(), y2.contiguous()
+
+            # partition in two equally sized set of channels
+            y1, y2 = torch.chunk(y, 2, dim=1)
+            y1, y2 = y1.contiguous(), y2.contiguous()
+
+            # compute inputs from outputs
+            x2 = y2 - self.Gm.forward(y1)
+            x1 = y1 - self.Fm.forward(x2)
+
+            x = torch.cat([x1, x2], dim=1)
+        else:
+            raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
+                                      .format(self.implementation_bwd))
+        return x
+
+
+class AdditiveBlockFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, Fm, Gm, *weights):
         """Forward pass for the reversible block computes:
@@ -232,7 +401,7 @@ class ReversibleBlockFunction(torch.autograd.Function):
         return (grad_input, None, None) + FWgrads + GWgrads
 
 
-class ReversibleBlockInverseFunction(torch.autograd.Function):
+class AdditiveBlockInverseFunction(torch.autograd.Function):
     @staticmethod
     def forward(cty, y, Fm, Gm, *weights):
         """Forward pass for the reversible block computes:
@@ -346,7 +515,7 @@ class ReversibleBlockInverseFunction(torch.autograd.Function):
         return (grad_input, None, None) + FWgrads + GWgrads
 
 
-class ReversibleBlockFunction2(torch.autograd.Function):
+class AdditiveBlockFunction2(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, Fm, Gm, *weights):
         """Forward pass for the reversible block computes:
@@ -468,7 +637,7 @@ class ReversibleBlockFunction2(torch.autograd.Function):
         return (grad_input, None, None) + FWgrads + GWgrads
 
 
-class ReversibleBlockInverseFunction2(torch.autograd.Function):
+class AdditiveBlockInverseFunction2(torch.autograd.Function):
     @staticmethod
     def forward(cty, y, Fm, Gm, *weights):
         """Forward pass for the reversible block computes:
