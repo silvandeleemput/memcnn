@@ -280,26 +280,24 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
 
         with set_grad_enabled(True):
             # compute outputs building a sub-graph
-            y2_ = y2
-            y1_ = y1
-            y2_.requires_grad = True
-            y1_.requires_grad = True
+            y2.requires_grad = True
+            y1.requires_grad = True
 
-            x2_ = y2_ - Gm.forward(y1_)
-            x1_ = y1_ - Fm.forward(x2_)
-            x = torch.cat([x1_, x2_], dim=1)
+            x2 = y2 - Gm.forward(y1)
+            x1 = y1 - Fm.forward(x2)
+            x = torch.cat([x1, x2], dim=1)
 
             # perform full backward pass on graph...
-            dd = torch.autograd.grad(x, (y2_, y1_ ) + tuple(Fm.parameters()) + tuple(Gm.parameters()), grad_output)
+            dd = torch.autograd.grad(x, (y2, y1 ) + tuple(Fm.parameters()) + tuple(Gm.parameters()), grad_output)
 
             FWgrads = dd[2:2+len(FWeights)]
             GWgrads = dd[2+len(FWeights):]
             grad_input = torch.cat([dd[0], dd[1]], dim=1)
 
             # cleanup sub-graph
-            x1_.detach_()
-            x2_.detach_()
-            del x1_, x2_
+            x1.detach_()
+            x2.detach_()
+            del x1, x2
 
         # restore input
         y.set_(torch.cat([y1, y2], dim=1).contiguous())
@@ -404,25 +402,24 @@ class AdditiveBlockFunction2(torch.autograd.Function):
             x.set_(torch.cat([x1, x2], dim=1).contiguous()).detach()
 
             # compute outputs building a sub-graph
-            z1 = x1_stop + F_x2
-            y2_ = x2_stop + G_z1
-            y1_ = z1
+            y1 = x1_stop + F_x2
+            y2 = x2_stop + G_z1
 
             # calculate the final gradients for the weights and inputs
-            dd = torch.autograd.grad(y2_, (z1_stop,) + tuple(Gm.parameters()), y2_grad) #, retain_graph=False)
+            dd = torch.autograd.grad(y2, (z1_stop,) + tuple(Gm.parameters()), y2_grad) #, retain_graph=False)
             z1_grad = dd[0] + y1_grad
             GWgrads = dd[1:]
 
-            dd = torch.autograd.grad(y1_, (x1_stop, x2_stop) + tuple(Fm.parameters()), z1_grad, retain_graph=False)
+            dd = torch.autograd.grad(y1, (x1_stop, x2_stop) + tuple(Fm.parameters()), z1_grad, retain_graph=False)
 
             FWgrads = dd[2:]
             x2_grad = dd[1] + y2_grad
             x1_grad = dd[0]
             grad_input = torch.cat([x1_grad, x2_grad], dim=1)
 
-            y1_.detach_()
-            y2_.detach_()
-            del y1_, y2_
+            y1.detach_()
+            y2.detach_()
+            del y1, y2
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -526,15 +523,15 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
             # compute outputs building a sub-graph
             z1 = y2_stop - G_y1
-            x1_ = y1_stop - F_z1
-            x2_ = z1
+            x1 = y1_stop - F_z1
+            x2 = z1
 
             # calculate the final gradients for the weights and inputs
-            dd = torch.autograd.grad(x1_, (z1_stop,) + tuple(Fm.parameters()), x1_grad) #, retain_graph=False)
+            dd = torch.autograd.grad(x1, (z1_stop,) + tuple(Fm.parameters()), x1_grad) #, retain_graph=False)
             z1_grad = dd[0] + x2_grad # + or - ?
             FWgrads = dd[1:]
 
-            dd = torch.autograd.grad(x2_, (y2_stop, y1_stop) + tuple(Gm.parameters()), z1_grad, retain_graph=False)
+            dd = torch.autograd.grad(x2, (y2_stop, y1_stop) + tuple(Gm.parameters()), z1_grad, retain_graph=False)
 
             GWgrads = dd[2:]
             y1_grad = dd[1] + x1_grad # + or - ?
@@ -542,9 +539,8 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
             grad_input = torch.cat([y1_grad, y2_grad], dim=1)
 
-            x1_.detach_()
-            x2_.detach_()
-            del x1_, x2_
+            x1.detach_()
+            x2.detach_()
+            del x1, x2
 
         return (grad_input, None, None) + FWgrads + GWgrads
-
