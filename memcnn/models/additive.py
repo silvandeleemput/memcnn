@@ -1,12 +1,7 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import copy
 from contextlib import contextmanager
-import warnings
-
-warnings.filterwarnings(action='ignore', category=UserWarning)
-
 
 use_context_mans = int(torch.__version__[0]) * 100 + int(torch.__version__[2]) - \
                    (1 if 'a' in torch.__version__ else 0) > 3
@@ -74,6 +69,7 @@ class AdditiveBlock(nn.Module):
         # clears the input data as it can be reversed on the backward pass
         if not self.keep_input:
             x.data.set_()
+            del x
 
         return out
 
@@ -91,6 +87,7 @@ class AdditiveBlock(nn.Module):
         # clears the input data as it can be reversed on the backward pass
         if not self.keep_input:
             y.data.set_()
+            del y
 
         return x
 
@@ -136,16 +133,12 @@ class AdditiveBlockFunction(torch.autograd.Function):
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # compute outputs
-            with warnings.catch_warnings():
-                x2var = Variable(x2)
-            fmr = Fm.forward(x2var).data
+            fmr = Fm.forward(x2)
 
             y1 = x1 + fmr
             x1.set_()
             del x1
-            with warnings.catch_warnings():
-                y1var = Variable(y1)
-            gmr = Gm.forward(y1var).data
+            gmr = Gm.forward(y1)
             y2 = x2 + gmr
             x2.set_()
             del x2
@@ -170,41 +163,37 @@ class AdditiveBlockFunction(torch.autograd.Function):
         y1, y2 = y1.contiguous(), y2.contiguous()
 
         # partition output gradient also on channels
-        assert(grad_output.data.shape[1] % 2 == 0)
+        assert(grad_output.shape[1] % 2 == 0)
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             # recompute x
-            z1_stop = Variable(y1.data, requires_grad=True)
             GWeights = [p for p in Gm.parameters()]
-            x2 = y2 - Gm.forward(z1_stop)
+            x2 = y2 - Gm.forward(y1)
             x1 = y1 - Fm.forward(x2)
-
 
         with set_grad_enabled(True):
             # compute outputs building a sub-graph
-            x1_ = Variable(x1.data, requires_grad=True)
-            x2_ = Variable(x2.data, requires_grad=True)
-            x1_.requires_grad = True
-            x2_.requires_grad = True
+            x1.requires_grad = True
+            x2.requires_grad = True
 
-            y1_ = x1_ + Fm.forward(x2_)
-            y2_ = x2_ + Gm.forward(y1_)
-            y = torch.cat([y1_, y2_], dim=1)
+            y1 = x1 + Fm.forward(x2)
+            y2 = x2 + Gm.forward(y1)
+            y = torch.cat([y1, y2], dim=1)
 
             # perform full backward pass on graph...
-            dd = torch.autograd.grad(y, (x1_, x2_ ) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output)
+            dd = torch.autograd.grad(y, (x1, x2 ) + tuple(Gm.parameters()) + tuple(Fm.parameters()), grad_output)
 
             GWgrads = dd[2:2+len(GWeights)]
             FWgrads = dd[2+len(GWeights):]
             grad_input = torch.cat([dd[0], dd[1]], dim=1)
 
             # cleanup sub-graph
-            y1_.detach_()
-            y2_.detach_()
-            del y1_, y2_
+            y1.detach_()
+            y2.detach_()
+            del y1, y2
 
         # restore input
-        x.data.set_(torch.cat([x1, x2], dim=1).data.contiguous())
+        x.set_(torch.cat([x1, x2], dim=1).contiguous())
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -250,16 +239,12 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # compute outputs
-            with warnings.catch_warnings():
-                y1var = Variable(y1)
-            gmr = Gm.forward(y1var).data
+            gmr = Gm.forward(y1)
 
             x2 = y2 - gmr
             y2.set_()
             del y2
-            with warnings.catch_warnings():
-                x2var = Variable(x2)
-            fmr = Fm.forward(x2var).data
+            fmr = Fm.forward(x2)
             x1 = y1 - fmr
             y1.set_()
             del y1
@@ -284,20 +269,19 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
         x1, x2 = x1.contiguous(), x2.contiguous()
 
         # partition output gradient also on channels
-        assert(grad_output.data.shape[1] % 2 == 0)
+        assert(grad_output.shape[1] % 2 == 0)
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             # recompute y
-            z1_stop = Variable(x2.data, requires_grad=True)
             FWeights = [p for p in Fm.parameters()]
-            y1 = x1 + Fm.forward(z1_stop)
+            y1 = x1 + Fm.forward(x2)
             y2 = x2 + Gm.forward(y1)
 
 
         with set_grad_enabled(True):
             # compute outputs building a sub-graph
-            y2_ = Variable(y2.data, requires_grad=True)
-            y1_ = Variable(y1.data, requires_grad=True)
+            y2_ = y2
+            y1_ = y1
             y2_.requires_grad = True
             y1_.requires_grad = True
 
@@ -318,7 +302,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
             del x1_, x2_
 
         # restore input
-        y.data.set_(torch.cat([y1, y2], dim=1).data.contiguous())
+        y.set_(torch.cat([y1, y2], dim=1).contiguous())
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -363,16 +347,12 @@ class AdditiveBlockFunction2(torch.autograd.Function):
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # compute outputs
-            with warnings.catch_warnings():
-                x2var = Variable(x2)
-            fmr = Fm.forward(x2var).data
+            fmr = Fm.forward(x2)
 
             y1 = x1 + fmr
             x1.set_()
             del x1
-            with warnings.catch_warnings():
-                y1var = Variable(y1)
-            gmr = Gm.forward(y1var).data
+            gmr = Gm.forward(y1)
             y2 = x2 + gmr
             x2.set_()
             del x2
@@ -394,12 +374,12 @@ class AdditiveBlockFunction2(torch.autograd.Function):
         # are all variable objects now
         x, output = ctx.saved_tensors
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             y1, y2 = torch.chunk(output, 2, dim=1)
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # partition output gradient also on channels
-            assert(grad_output.data.shape[1] % 2 == 0)
+            assert(grad_output.shape[1] % 2 == 0)
             y1_grad, y2_grad = torch.chunk(grad_output, 2, dim=1)
             y1_grad, y2_grad = y1_grad.contiguous(), y2_grad.contiguous()
 
@@ -407,18 +387,21 @@ class AdditiveBlockFunction2(torch.autograd.Function):
         # z1_stop, x2_stop, GW, FW
         # Also recompute inputs (x1, x2) from outputs (y1, y2)
         with set_grad_enabled(True):
-            z1_stop = Variable(y1.data, requires_grad=True)
+            z1_stop = y1.detach()
+            z1_stop.requires_grad = True
 
             G_z1 = Gm.forward(z1_stop)
             x2 = y2 - G_z1
-            x2_stop = Variable(x2.data, requires_grad=True)
+            x2_stop = x2.detach()
+            x2_stop.requires_grad = True
 
             F_x2 = Fm.forward(x2_stop)
             x1 = y1 - F_x2
-            x1_stop = Variable(x1.data, requires_grad=True)
+            x1_stop = x1.detach()
+            x1_stop.requires_grad = True
 
             # restore input
-            x.data.set_(torch.cat([x1.data, x2.data], dim=1).contiguous())
+            x.set_(torch.cat([x1, x2], dim=1).contiguous()).detach()
 
             # compute outputs building a sub-graph
             z1 = x1_stop + F_x2
@@ -485,16 +468,12 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # compute outputs
-            with warnings.catch_warnings():
-                y1var = Variable(y1)
-            gmr = Gm.forward(y1var).data
+            gmr = Gm.forward(y1)
 
             x2 = y2 - gmr
             y2.set_()
             del y2
-            with warnings.catch_warnings():
-                x2var = Variable(x2)
-            fmr = Fm.forward(x2var).data
+            fmr = Fm.forward(x2)
             x1 = y1 - fmr
             y1.set_()
             del y1
@@ -516,12 +495,12 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
         # are all variable objects now
         y, output = cty.saved_tensors
 
-        with set_grad_enabled(False):
+        with torch.no_grad():
             x1, x2 = torch.chunk(output, 2, dim=1)
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # partition output gradient also on channels
-            assert(grad_output.data.shape[1] % 2 == 0)
+            assert(grad_output.shape[1] % 2 == 0)
             x1_grad, x2_grad = torch.chunk(grad_output, 2, dim=1)
             x1_grad, x2_grad = x1_grad.contiguous(), x2_grad.contiguous()
 
@@ -529,18 +508,21 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
         # z1_stop, y1_stop, GW, FW
         # Also recompute inputs (y1, y2) from outputs (x1, x2)
         with set_grad_enabled(True):
-            z1_stop = Variable(x2.data, requires_grad=True)
+            z1_stop = x2.detach()
+            z1_stop.requires_grad = True
 
             F_z1 = Fm.forward(z1_stop)
             y1 = x1 + F_z1
-            y1_stop = Variable(y1.data, requires_grad=True)
+            y1_stop = y1.detach()
+            y1_stop.requires_grad = True
 
             G_y1 = Gm.forward(y1_stop)
             y2 = x2 + G_y1
-            y2_stop = Variable(y2.data, requires_grad=True)
+            y2_stop = y2.detach()
+            y2_stop.requires_grad = True
 
             # restore input
-            y.data.set_(torch.cat([y1.data, y2.data], dim=1).contiguous())
+            y.set_(torch.cat([y1, y2], dim=1).contiguous()).detach()
 
             # compute outputs building a sub-graph
             z1 = y2_stop - G_y1

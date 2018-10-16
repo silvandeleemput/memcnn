@@ -72,7 +72,7 @@ class ReversibleOperationsTestCase(unittest.TestCase):
 
                         self.assertTrue(Y.shape == Xshape)
                         self.assertTrue(X.data.numpy().shape == data.shape)
-                        self.assertTrue(np.allclose(X.data.numpy(), data, atol=1e-06))
+                        self.assertTrue(np.allclose(X.data.numpy(), data, atol=1e-05))
                         self.assertTrue(np.allclose(X.data.numpy(), Xinv.data.numpy()))
                         impl_out.append(Y.data.numpy().copy())
                         impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
@@ -146,7 +146,7 @@ class ReversibleOperationsTestCase(unittest.TestCase):
 
                         self.assertTrue(X.shape == Yshape)
                         self.assertTrue(Y.data.numpy().shape == data.shape)
-                        self.assertTrue(np.allclose(Y.data.numpy(), data, atol=1e-06))
+                        self.assertTrue(np.allclose(Y.data.numpy(), data, atol=1e-05))
                         self.assertTrue(np.allclose(Y.data.numpy(), Yinv.data.numpy()))
                         impl_out.append(X.data.numpy().copy())
                         impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
