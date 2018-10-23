@@ -1,20 +1,11 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import copy
-from contextlib import contextmanager
 import warnings
 from memcnn.models.additive import AdditiveBlock
 from memcnn.models.affine import AffineBlock
 
 
 warnings.filterwarnings(action='ignore', category=UserWarning)
-
-
-use_context_mans = int(torch.__version__[0]) * 100 + int(torch.__version__[2]) - \
-                   (1 if 'a' in torch.__version__ else 0) > 3
-
-
 
 
 class ReversibleBlock(nn.Module):
@@ -45,20 +36,28 @@ class ReversibleBlock(nn.Module):
 
         """
         super(ReversibleBlock, self).__init__()
-
+        self.keep_input = keep_input
         if coupling == 'additive':
-            self.rev_block = AdditiveBlock(Fm, Gm, keep_input, implementation_fwd, implementation_bwd)
+            self.rev_block = AdditiveBlock(Fm, Gm, implementation_fwd, implementation_bwd)
         elif coupling == 'affine':
-            self.rev_block = AffineBlock(Fm, Gm, keep_input, implementation_fwd, implementation_bwd)
+            self.rev_block = AffineBlock(Fm, Gm, implementation_fwd, implementation_bwd)
         else:
             raise NotImplementedError('Unknown coupling method: %s' % coupling)
 
     def forward(self, x):
-        return self.rev_block(x)
+        y = self.rev_block(x)
+        # clears the input data as it can be reversed on the backward pass
+        if not self.keep_input:
+            x.data.set_()
+            del x
+
+        return y
 
     def inverse(self, y):
-        return self.rev_block.inverse(y)
+        x = self.rev_block.inverse(y)
+        # clears the input data as it can be reversed on the backward pass
+        if not self.keep_input:
+            y.data.set_()
+            del y
 
-
-
-
+        return x
