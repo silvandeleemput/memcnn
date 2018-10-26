@@ -88,8 +88,6 @@ def train(manager,
         loss = ceriterion(score, vl)
         optimizer.zero_grad()
         loss.backward()
-        manager.save_parameter_stats(False)
-        manager.save_parameter_stats(True)
         optimizer.step()
 
         batch_time.update(time.time()-end)
