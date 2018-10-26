@@ -75,7 +75,7 @@ WORKDIR /home/user
 RUN mkdir data
 RUN mkdir experiments
 RUN git clone https://github.com/silvandeleemput/memcnn.git
-RUN cd memcnn && git reset --hard 67a6198c260784fcf281b3e7dfedc5fa3f1d027d
+RUN cd memcnn && git reset --hard 01730d35f8b3ecc47b6a1f9a2c037f6858080e82
 RUN mv /home/user/memcnn/memcnn/config/config.json.example /home/user/memcnn/memcnn/config/config.json
 
 ENV PYTHONPATH $PYTHONPATH:/home/user/memcnn:/home/user/memcnn/memcnn
