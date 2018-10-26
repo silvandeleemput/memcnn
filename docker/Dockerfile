@@ -54,26 +54,28 @@ RUN (echo user ; echo user) | passwd user
 # Configure sudo
 RUN usermod -a -G sudo user
 
-RUN pip install --upgrade pip
-RUN pip install --upgrade Cython
-RUN pip install --upgrade tqdm
-RUN pip install --upgrade setuptools
-RUN pip install --upgrade six
-RUN pip install --upgrade h5py
-RUN pip install nibabel
-RUN pip install SimpleITK
-RUN pip install --upgrade pillow
+RUN pip install -Iv pip==18.1
+RUN pip install -Iv Cython==0.27.3
+RUN pip install -Iv tqdm==4.19.5
+RUN pip install -Iv setuptools==38.5.1
+RUN pip install -Iv six==1.11.0
+RUN pip install -Iv h5py==2.7.1
+RUN pip install -Iv nibabel==2.2.1
+RUN pip install -Iv SimpleITK==1.0.1
+RUN pip install -Iv pillow==5.0.0
+RUN pip install -Iv tensorflow==1.11.0
 
 # install PyTorch
 RUN pip install torch==0.4.0
-RUN pip install torchvision
-RUN pip install git+https://github.com/lanpa/tensorboard-pytorch
+RUN pip install torchvision==0.2.1
+RUN pip install tensorboardX==1.4
 
 # Clone into memcnn library & setup
 WORKDIR /home/user
 RUN mkdir data
 RUN mkdir experiments
 RUN git clone https://github.com/silvandeleemput/memcnn.git
+RUN cd memcnn && git reset --hard 67a6198c260784fcf281b3e7dfedc5fa3f1d027d
 RUN mv /home/user/memcnn/memcnn/config/config.json.example /home/user/memcnn/memcnn/config/config.json
 
 ENV PYTHONPATH $PYTHONPATH:/home/user/memcnn:/home/user/memcnn/memcnn
