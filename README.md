@@ -113,7 +113,7 @@ running the code from their [GitHub](https://github.com/renmengye/revnet-public)
 The PyTorch results listed were recomputed on June 11th 2018, and differ from the results in the paper.
 The Tensorflow results are still the same.
 
-Memory consumption of model training in PyTorch.
+#### Memory consumption of model training in PyTorch
 
 <table>
 <tr><th> Model      </th><th> GPU VRAM (MB) </th></tr>
