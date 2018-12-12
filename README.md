@@ -116,7 +116,7 @@ The Tensorflow results are still the same.
 Memory consumption of model training in PyTorch.
 
 <table>
-<tr><th> Model      </th><th> GPU VRAM (Mb) </th></tr>
+<tr><th> Model      </th><th> GPU VRAM (MB) </th></tr>
 <tr><td> resnet-32  </td><td> 766     </td></tr>
 <tr><td> resnet-110 </td><td> 1357     </td></tr>
 <tr><td> resnet-164 </td><td> 3083     </td></tr>
