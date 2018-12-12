@@ -113,6 +113,18 @@ running the code from their [GitHub](https://github.com/renmengye/revnet-public)
 The PyTorch results listed were recomputed on June 11th 2018, and differ from the results in the paper.
 The Tensorflow results are still the same.
 
+Memory consumption of model training in PyTorch.
+
+<table>
+<tr><th> Model      </th><th> GPU VRAM (Mb) </th></tr>
+<tr><td> resnet-32  </td><td> 766     </td></tr>
+<tr><td> resnet-110 </td><td> 1357     </td></tr>
+<tr><td> resnet-164 </td><td> 3083     </td></tr>
+<tr><td> revnet-38  </td><td> 677     </td></tr>
+<tr><td> revnet-110 </td><td> 706     </td></tr>
+<tr><td> revnet-164 </td><td> 1226     </td></tr>
+</table>
+
 ## Future Releases
 
 * Support for other reversible networks
