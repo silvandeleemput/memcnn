@@ -112,9 +112,7 @@ class RevBottleneck(nn.Module):
         residual = x
         if self.downsample is not None:
             out = self.bottleneck_sub(x)
-            if self.downsample is not None:
-                residual = self.downsample(x)
-
+            residual = self.downsample(x)
             out += residual
         else:
             out = self.revblock(x)
