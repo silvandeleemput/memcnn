@@ -33,7 +33,7 @@ class ReversibleBlock(nn.Module):
 
             Gm : torch.nn.Module
                 A torch.nn.Module encapsulating an arbitrary function
-                (If not specified a deepcopy of Gm is used as a Module)
+                (If not specified a deepcopy of Fm is used as a Module)
 
             implementation : int
                 Switch between different Reversible Operation implementations. Default = 1
