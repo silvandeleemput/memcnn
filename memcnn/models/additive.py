@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import copy
 from memcnn.models.utils import set_grad_enabled
+import warnings
+
+
+class NonMemorySavingWarning(UserWarning):
+    pass
 
 
 class AdditiveBlock(nn.Module):
@@ -15,7 +20,7 @@ class AdditiveBlock(nn.Module):
 
             Gm : torch.nn.Module
                 A torch.nn.Module encapsulating an arbitrary function
-                (If not specified a deepcopy of Gm is used as a Module)
+                (If not specified a deepcopy of Fm is used as a Module)
 
             implementation_fwd : int
                 Switch between different Additive Operation implementations for forward pass. Default = 1
@@ -41,6 +46,15 @@ class AdditiveBlock(nn.Module):
             out = AdditiveBlockFunction.apply(*args)
         elif self.implementation_fwd == 1:
             out = AdditiveBlockFunction2.apply(*args)
+        elif self.implementation_fwd == -1:
+            warnings.warn('Using direct non-memory saving implementation.', NonMemorySavingWarning)
+            x1, x2 = torch.chunk(x, 2, dim=1)
+            x1, x2 = x1.contiguous(), x2.contiguous()
+            fmd = self.Fm.forward(x2)
+            y1 = x1 + fmd
+            gmd = self.Gm.forward(y1)
+            y2 = x2 + gmd
+            out = torch.cat([y1, y2], dim=1)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -54,6 +68,14 @@ class AdditiveBlock(nn.Module):
             x = AdditiveBlockInverseFunction.apply(*args)
         elif self.implementation_bwd == 1:
             x = AdditiveBlockInverseFunction2.apply(*args)
+        elif self.implementation_bwd == -1:
+            y1, y2 = torch.chunk(y, 2, dim=1)
+            y1, y2 = y1.contiguous(), y2.contiguous()
+            gmd = self.Gm.forward(y1)
+            x2 = y2 - gmd
+            fmd = self.Fm.forward(x2)
+            x1 = y1 - fmd
+            x = torch.cat([x1, x2], dim=1)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))

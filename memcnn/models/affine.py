@@ -60,6 +60,14 @@ class AffineBlock(nn.Module):
             out = AffineBlockFunction.apply(*args)
         elif self.implementation_fwd == 1:
             out = AffineBlockFunction2.apply(*args)
+        elif self.implementation_fwd == -1:
+            x1, x2 = torch.chunk(x, 2, dim=1)
+            x1, x2 = x1.contiguous(), x2.contiguous()
+            fmr1, fmr2 = self.Fm.forward(x2)
+            y1 = (x1 * fmr1) + fmr2
+            gmr1, gmr2 = self.Gm.forward(y1)
+            y2 = (x2 * gmr1) + gmr2
+            out = torch.cat([y1, y2], dim=1)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -73,6 +81,14 @@ class AffineBlock(nn.Module):
             x = AffineBlockInverseFunction.apply(*args)
         elif self.implementation_bwd == 1:
             x = AffineBlockInverseFunction2.apply(*args)
+        elif self.implementation_bwd == -1:
+            y1, y2 = torch.chunk(y, 2, dim=1)
+            y1, y2 = y1.contiguous(), y2.contiguous()
+            gmr1, gmr2 = self.Gm.forward(y1)
+            x2 = (y2 - gmr2) / gmr1
+            fmr1, fmr2 = self.Fm.forward(x2)
+            x1 = (y1 - fmr2) / fmr1
+            x = torch.cat([x1, x2], dim=1)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))
