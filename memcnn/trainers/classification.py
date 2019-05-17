@@ -2,9 +2,7 @@ import os
 import time
 import logging
 from torch.autograd import Variable
-
 from memcnn.utils.stats import AverageMeter, accuracy
-
 from tensorboardX import SummaryWriter
 
 
@@ -29,7 +27,7 @@ def validate(model, ceriterion, val_loader, use_cuda):
         loss = ceriterion(score, vl)
         prec1 = accuracy(score.data, label)
 
-        losses.update(loss.data[0], x.size(0))
+        losses.update(loss.item(), x.size(0))
         top1.update(prec1[0][0], x.size(0))
 
         batch_time.update(time.time() - end)
@@ -48,11 +46,11 @@ def train(manager,
         train_loader,
         test_loader,
         start_iter,
-        disp_iter = 100,
-        save_iter = 10000,
-        valid_iter = 1000,
-        use_cuda = False,
-        loss = None):
+        disp_iter=100,
+        save_iter=10000,
+        valid_iter=1000,
+        use_cuda=False,
+        loss=None):
     """train loop"""
 
     model, optimizer = manager.model, manager.optimizer
@@ -69,6 +67,7 @@ def train(manager,
     #train_loader.sampler = NSamplesRandomSampler(train_loader.dataset, train_loader.sampler.nsamples - start_iter)
     max_iterations = train_loader.sampler.nsamples // train_loader.batch_size
     train_loader.sampler.nsamples = train_loader.sampler.nsamples - start_iter
+    end = time.time()
     for ind, (x, label) in enumerate(train_loader):
         iteration = ind + 1 + start_iter
 
@@ -77,7 +76,6 @@ def train(manager,
                 param_group['lr'] *= 0.1
 
         model.train()
-        end = time.time()
 
         data_time.update(time.time()-end)
         if use_cuda:
@@ -93,7 +91,7 @@ def train(manager,
         batch_time.update(time.time()-end)
         prec1 = accuracy(score.data, label)
 
-        losses.update(loss.data[0], x.size(0))
+        losses.update(loss.item(), x.size(0))
         top1.update(prec1[0][0], x.size(0))
 
         if iteration % disp_iter == 0:
@@ -106,7 +104,7 @@ def train(manager,
                   data_time=data_time, loss=losses, top1=top1))
 
         if iteration % disp_iter == 0:
-            writer.add_scalar('train_loss', loss.data[0], iteration)
+            writer.add_scalar('train_loss', loss.item(), iteration)
             writer.add_scalar('train_acc', prec1[0][0], iteration)
             losses.reset()
             top1.reset()

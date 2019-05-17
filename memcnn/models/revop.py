@@ -23,6 +23,7 @@ class ReversibleBlock(nn.Module):
 
             coupling: str
                 Type of coupling ['additive', 'affine']. Default = 'additive'
+                'affine' is currently experimental
 
             keep_input : bool
                 Retain the input information, by default it can be discarded since it will be
@@ -30,9 +31,15 @@ class ReversibleBlock(nn.Module):
 
             implementation_fwd : int
                 Switch between different Operation implementations for forward training. Default = 1
+                -1 : Naive implementation without reconstruction on the backward pass (keep_input should be True)
+                 0 : Memory efficient implementation, compute gradients directly on y
+                 1 : Memory efficient implementation, similar to approach in Gomez et al. 2017
 
             implementation_bwd : int
                 Switch between different Operation implementations for backward training. Default = 1
+                -1 : Naive implementation without reconstruction on the backward pass (keep_input should be True)
+                 0 : Memory efficient implementation, compute gradients directly on y
+                 1 : Memory efficient implementation, similar to approach in Gomez et al. 2017
 
         """
         super(ReversibleBlock, self).__init__()
@@ -46,18 +53,16 @@ class ReversibleBlock(nn.Module):
 
     def forward(self, x):
         y = self.rev_block(x)
-        # clears the input data as it can be reversed on the backward pass
+        # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
         if not self.keep_input:
-            x.data.set_()
-            del x
+            x.storage().resize_(0)
 
         return y
 
     def inverse(self, y):
         x = self.rev_block.inverse(y)
-        # clears the input data as it can be reversed on the backward pass
+        # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
         if not self.keep_input:
-            y.data.set_()
-            del y
+            y.storage().resize_(0)
 
         return x

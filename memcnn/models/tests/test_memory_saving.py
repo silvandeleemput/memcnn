@@ -5,7 +5,7 @@ import memcnn.models.revop as revop
 import numpy as np
 
 
-class ReversibleOperationsTestCase(unittest.TestCase):
+class ReversibleMemorySavingTestCase(unittest.TestCase):
 
     @unittest.skipIf(not torch.cuda.is_available(), reason='This test requires a GPU to be available')
     def test_memory_saving(self):

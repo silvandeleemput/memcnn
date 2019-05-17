@@ -3,7 +3,7 @@ import torch.nn as nn
 import copy
 import warnings
 from memcnn.models.utils import set_grad_enabled
-
+import numpy as np
 
 warnings.filterwarnings(action='ignore', category=UserWarning)
 
@@ -209,7 +209,9 @@ class AffineBlockFunction(torch.autograd.Function):
             del y1, y2
 
         # restore input
-        x.set_(torch.cat([x1, x2], dim=1).contiguous())
+        xout = torch.cat([x1, x2], dim=1).contiguous()
+        x.storage().resize(np.prod(xout.shape))
+        x.set_(xout)
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -329,7 +331,9 @@ class AffineBlockInverseFunction(torch.autograd.Function):
             del x1, x2
 
         # restore input
-        y.set_(torch.cat([y1, y2], dim=1).contiguous())
+        yout = torch.cat([y1, y2], dim=1).contiguous()
+        y.storage().resize_(int(np.prod(yout.shape)))
+        y.set_(yout)
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -434,7 +438,9 @@ class AffineBlockFunction2(torch.autograd.Function):
             x1_stop.requires_grad = True
 
             # restore input
-            x.set_(torch.cat([x1, x2], dim=1).contiguous())
+            xout = torch.cat([x1, x2], dim=1).contiguous()
+            x.storage().resize(np.prod(xout.shape))
+            x.set_(xout).detach()  # NOTE .detach() is very important here.
 
             # compute outputs building a sub-graph
             z1 = x1_stop * F_x21 + F_x22
@@ -552,7 +558,9 @@ class AffineBlockInverseFunction2(torch.autograd.Function):
             y2_stop.requires_grad = True
 
             # restore input
-            y.set_(torch.cat([y1, y2], dim=1).contiguous())
+            yout = torch.cat([y1, y2], dim=1).contiguous()
+            y.storage().resize_(int(np.prod(yout.shape)))
+            y.set_(yout).detach()  # NOTE .detach() is very important here.
 
             # compute outputs building a sub-graph
             z1 = (y2_stop - G_y12) / G_y11

@@ -13,12 +13,12 @@ class NSamplesRandomSampler(Sampler):
 
     def __init__(self, data_source, nsamples):
         self.data_source = data_source
-        self.nsamples = nsamples
+        self.nsamples = int(nsamples)
 
     def __iter__(self):
         samples = torch.LongTensor()
         ldsource = len(self.data_source)
-        for _ in range(self.nsamples / ldsource):
+        for _ in range(self.nsamples // ldsource):
             samples = torch.cat((samples, torch.randperm(len(self.data_source)).long()))
         if self.nsamples % ldsource > 0:
             samples = torch.cat((samples, torch.randperm(self.nsamples % ldsource).long()))
