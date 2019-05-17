@@ -3,6 +3,7 @@ import time
 import logging
 from torch.autograd import Variable
 from memcnn.utils.stats import AverageMeter, accuracy
+from memcnn.utils.tensorboard import parse_logs
 from tensorboardX import SummaryWriter
 
 
@@ -62,9 +63,7 @@ def train(manager,
     top1 = AverageMeter()
 
     ceriterion = loss
-
     # ensure train_loader enumerates to max_epoch
-    #train_loader.sampler = NSamplesRandomSampler(train_loader.dataset, train_loader.sampler.nsamples - start_iter)
     max_iterations = train_loader.sampler.nsamples // train_loader.batch_size
     train_loader.sampler.nsamples = train_loader.sampler.nsamples - start_iter
     end = time.time()
@@ -77,7 +76,8 @@ def train(manager,
 
         model.train()
 
-        data_time.update(time.time()-end)
+        data_time.update(time.time() - end)
+        end = time.time()
         if use_cuda:
             x, label = x.cuda(), label.cuda()
         vx, vl = Variable(x), Variable(label)
@@ -121,6 +121,7 @@ def train(manager,
 
         end = time.time()
 
-    writer.export_scalars_to_json(os.path.join(manager.log_dir, "scalars.json"))
-
     writer.close()
+
+    # Generate final scalars.json summary file from all generated log_files
+    parse_logs(manager.log_dir, os.path.join(manager.log_dir, "scalars.json"))
