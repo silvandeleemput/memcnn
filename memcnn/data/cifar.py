@@ -1,11 +1,9 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
-import torchvision
 import torchvision.transforms as transforms
 import numpy as np
 from memcnn.data.sampling import NSamplesRandomSampler
+
 
 def get_cifar_data_loaders(dataset, data_dir, max_epoch, batch_size, workers):
 
@@ -17,7 +15,7 @@ def get_cifar_data_loaders(dataset, data_dir, max_epoch, batch_size, workers):
 
     # define transforms
     def random_crop_sub(x, crop_size=4, img_size=(32, 32)):
-        cz = crop_size / 2
+        cz = crop_size // 2
         x_pad = np.pad(x, ((cz, cz), (cz, cz), (0, 0)), mode='constant')
         sx, sy = np.random.randint(crop_size), np.random.randint(crop_size)
         return x_pad[sx:sx+img_size[0], sy:sy+img_size[1], :]

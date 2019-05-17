@@ -98,8 +98,8 @@ class RevBottleneck(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, noactivation=False):
         super(RevBottleneck, self).__init__()
         if downsample is None and stride == 1:
-            Gm = BottleneckSub(inplanes / 2, planes / 2, stride, noactivation)
-            Fm = BottleneckSub(inplanes / 2, planes / 2, stride, noactivation)
+            Gm = BottleneckSub(inplanes // 2, planes // 2, stride, noactivation)
+            Fm = BottleneckSub(inplanes // 2, planes // 2, stride, noactivation)
             self.revblock = ReversibleBlock(Gm, Fm)
         else:
             self.bottleneck_sub = BottleneckSub(inplanes, planes, stride, noactivation)
@@ -182,7 +182,7 @@ class ResNet(nn.Module):
         assert(len(self.channels_per_layer) == len(layers) + 1)
         self.inplanes = channels_per_layer[0]  # 64 by default
         super(ResNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=init_kernel_size, stride=strides[0], padding=(init_kernel_size - 1) / 2,
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=init_kernel_size, stride=strides[0], padding=(init_kernel_size - 1) // 2,
                                bias=False)
         self.bn1 = batch_norm(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
