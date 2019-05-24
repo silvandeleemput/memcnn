@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 aliases:
   - &container_python
     docker:
@@ -19,7 +19,7 @@ jobs:
     parameters:
       tests:
         type: string
-        default: "py27-torch04,py27-torch10,py27-torch11,py36-torch04,py36-torch10,py36-torch11"
+        default: py27-torch04,py27-torch10,py27-torch11,py36-torch04,py36-torch10,py36-torch11
     <<: *container_python
     steps:
       - checkout
@@ -45,15 +45,21 @@ workflows:
   build_and_test:
     jobs:
       - testing:
-          tests: "py27_torch04"
+          name: testing_py27_torch04
+          tests: py27_torch04
       - testing:
-          tests: "py27_torch10"
+          name: testing_py27_torch10
+          tests: py27_torch10
       - testing:
-          tests: "py27_torch11"
+          name: testing_py27_torch11
+          tests: py27_torch11
       - testing:
-          tests: "py36_torch04"
+          name: testing_py36_torch04
+          tests: py36_torch04
       - testing:
-          tests: "py36_torch10"
+          name: testing_py36_torch10
+          tests: py36_torch10
       - testing:
-          tests: "py36_torch11"
+          name: testing_py36_torch11
+          tests: py36_torch11
       - builddocs
