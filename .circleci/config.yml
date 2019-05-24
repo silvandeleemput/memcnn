@@ -46,20 +46,20 @@ workflows:
     jobs:
       - testing:
           name: testing_py27_torch04
-          tests: py27_torch04
+          tests: py27-torch04
       - testing:
           name: testing_py27_torch10
-          tests: py27_torch10
+          tests: py27-torch10
       - testing:
           name: testing_py27_torch11
-          tests: py27_torch11
+          tests: py27-torch11
       - testing:
           name: testing_py36_torch04
-          tests: py36_torch04
+          tests: py36-torch04
       - testing:
           name: testing_py36_torch10
-          tests: py36_torch10
+          tests: py36-torch10
       - testing:
           name: testing_py36_torch11
-          tests: py36_torch11
+          tests: py36-torch11
       - builddocs
