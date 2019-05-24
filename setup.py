@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='MemCNN',
-    version='0.4.0',
+    version='0.1.0',
     author='S.C. van de Leemput',
     author_email='silvandeleemput@gmail.com',
     packages=['memcnn'],
