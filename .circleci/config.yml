@@ -21,7 +21,7 @@ jobs:
       - checkout
       - *run_task_install_tox_dependencies
       - run:
-          name: execute the pytests documentation
+          name: execute the pytests
           command: |
             tox -e test
       - store_test_results:
