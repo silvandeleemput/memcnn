@@ -186,8 +186,9 @@ class AdditiveBlockFunction(torch.autograd.Function):
 
         # restore input
         xout = torch.cat([x1, x2], dim=1).contiguous()
-        x.storage().resize_(int(np.prod(xout.shape)))
-        x.set_(xout)
+        with torch.no_grad():
+            x.storage().resize_(int(np.prod(xout.shape)))
+            x.set_(xout)
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -295,8 +296,9 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
 
         # restore input
         yout = torch.cat([y1, y2], dim=1).contiguous()
-        x.storage().resize_(int(np.prod(yout.shape)))
-        y.set_(yout)
+        with torch.no_grad():
+            x.storage().resize_(int(np.prod(yout.shape)))
+            y.set_(yout)
 
         return (grad_input, None, None) + FWgrads + GWgrads
 
@@ -396,8 +398,9 @@ class AdditiveBlockFunction2(torch.autograd.Function):
 
             # restore input
             xout = torch.cat([x1, x2], dim=1).contiguous()
-            x.storage().resize_(int(np.prod(xout.shape)))
-            x.set_(xout).detach()  # NOTE .detach() is very important here.
+            with torch.no_grad():
+                x.storage().resize_(int(np.prod(xout.shape)))
+                x.set_(xout).detach()  # NOTE .detach() is very important here.
 
             # compute outputs building a sub-graph
             y1 = x1_stop + F_x2
@@ -518,8 +521,9 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
             # restore input
             yout = torch.cat([y1, y2], dim=1).contiguous()
-            y.storage().resize_(int(np.prod(yout.shape)))
-            y.set_(yout).detach()  # NOTE .detach() is very important here.
+            with torch.no_grad():
+                y.storage().resize_(int(np.prod(yout.shape)))
+                y.set_(yout).detach()  # NOTE .detach() is very important here.
 
             # compute outputs building a sub-graph
             z1 = y2_stop - G_y1

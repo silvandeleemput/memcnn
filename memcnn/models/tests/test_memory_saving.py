@@ -73,7 +73,8 @@ class ReversibleMemorySavingTestCase(unittest.TestCase):
                             optim.step()
                             # Should not be reached when input is kept
                             self.assertFalse(keep_input)
-                        except RuntimeError:
+                        except RuntimeError as e:
+                            print(e)
                             # Running out of memory should only happen when input is kept
                             self.assertTrue(keep_input)
                         finally:

@@ -37,14 +37,14 @@ class ReversibleOperationsTestCase(unittest.TestCase):
             for bwd in [False, True]:
                 for coupling in ['additive']:  # , 'affine']:
                     impl_out, impl_grad = [], []
-                    for keep_input in [False, True]:
+                    for keep_input_sub in [False, True]:
                         for implementation_fwd in [-1, -1, 0, 0, 1, 1]:
                             for implementation_bwd in [-1, 0, 1]:
-                                keep_input = keep_input or (implementation_bwd == -1)
+                                keep_input = keep_input_sub or implementation_bwd == -1 or implementation_fwd == -1
                                 # print(bwd, coupling, keep_input, implementation_fwd, implementation_bwd)
                                 # test with zero padded convolution
-                                X = Variable(torch.from_numpy(data.copy())).clone()
-                                Ytarget = Variable(torch.from_numpy(target_data.copy())).clone()
+                                X = Variable(torch.from_numpy(data.copy()))
+                                Ytarget = Variable(torch.from_numpy(target_data.copy()))
                                 Xshape = X.shape
                                 Gm2 = copy.deepcopy(Gm)
                                 rb = revop.ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
@@ -54,25 +54,27 @@ class ReversibleOperationsTestCase(unittest.TestCase):
 
                                 optim = torch.optim.RMSprop(rb.parameters())
                                 optim.zero_grad()
-
                                 if not bwd:
-                                    Y = rb(X)
+                                    Xin = X.clone()
+                                    Y = rb(Xin)
                                     Yrev = Y.clone()
                                     Xinv = rb.inverse(Yrev)
                                 else:
-                                    Y = rb.inverse(X)
+                                    Xin = X.clone()
+                                    Y = rb.inverse(Xin)
                                     Yrev = Y.clone()
                                     Xinv = rb(Yrev)
                                 loss = torch.nn.MSELoss()(Y, Ytarget)
 
                                 # has input been retained/discarded after forward (and backward) passes?
                                 if keep_input:
-                                    self.assertTrue(X.data.shape == Xshape)
+                                    self.assertTrue(Xin.data.shape == Xshape)
                                     self.assertTrue(Y.data.shape == Yrev.shape)
                                 else:
-                                    self.assertTrue(len(X.data.shape) == 0 or (len(X.data.shape) == 1 and X.data.shape[0] == 0))
+                                    self.assertTrue(len(Xin.data.shape) == 0 or (len(Xin.data.shape) == 1
+                                                                               and Xin.data.shape[0] == 0) or Xin.storage().size() == 0)
                                     self.assertTrue(len(Yrev.data.shape) == 0 or (len(Yrev.data.shape) == 1
-                                                                                  and Yrev.data.shape[0] == 0))
+                                                                                  and Yrev.data.shape[0] == 0) or Yrev.storage().size() == 0)
 
                                 optim.zero_grad()
                                 loss.backward()
@@ -90,6 +92,53 @@ class ReversibleOperationsTestCase(unittest.TestCase):
                         for i in range(0, len(impl_grad) - 1, 1):
                             self.assertTrue(np.allclose(impl_grad[i][0], impl_grad[i + 1][0]))
                             self.assertTrue(np.allclose(impl_out[i], impl_out[i + 1]))
+
+    def test_revblock_chained(self):
+        dims = (2, 10, 8, 8)
+        data = np.random.random(dims).astype(np.float32)
+        target_data = np.random.random(dims).astype(np.float32)
+
+        X = Variable(torch.from_numpy(data.copy()))
+        Ytarget = Variable(torch.from_numpy(target_data.copy()))
+
+        class SubModule(torch.nn.Module):
+            def __init__(self):
+                super(SubModule, self).__init__()
+                self.bn = torch.nn.BatchNorm2d(10 // 2)
+                self.conv = torch.nn.Conv2d(10 // 2, 10 // 2, (3, 3), padding=1)
+
+            def forward(self, x):
+                return self.bn(self.conv(x))
+
+        class SubModuleStack(torch.nn.Module):
+            def __init__(self, Gm, coupling='additive', depth=10, implementation_fwd=1, implementation_bwd=1, keep_input=False):
+                super(SubModuleStack, self).__init__()
+                self.stack = torch.nn.Sequential(
+                    *[revop.ReversibleBlock(Gm, Gm, coupling=coupling, implementation_fwd=implementation_fwd,
+                                            implementation_bwd=implementation_bwd,
+                                            keep_input=keep_input) for _ in range(depth)]
+                )
+
+            def forward(self, x):
+                return self.stack(x)
+
+
+        Gm = SubModule()
+        rb = SubModuleStack(Gm, depth=2, keep_input=False)
+        rb.train()
+        rb.zero_grad()
+
+        optim = torch.optim.RMSprop(rb.parameters())
+        optim.zero_grad()
+
+        Xin = X.clone()
+        Y = rb(Xin)
+
+        loss = torch.nn.MSELoss()(Y, Ytarget)
+
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
 
     def test_revblock_simple_inverse(self):
         """ReversibleBlock inverse test
