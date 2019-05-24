@@ -8,7 +8,7 @@ aliases:
     run:
       name: install tox dependencies
       command: |
-        sudo printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" > /etc/apt/sources.list
+        sudo printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" | sudo tee /etc/apt/sources.list
         sudo apt-get update
         sudo apt install -y build-essential libssl-dev libpython-dev python python-pip
         sudo pip install tox
