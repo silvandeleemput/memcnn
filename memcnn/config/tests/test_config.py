@@ -2,14 +2,21 @@ import unittest
 import json
 import os
 from memcnn.experiment.factory import load_experiment_config, experiment_config_parser
+from memcnn.config import Config
+
 
 class ConfigTestCase(unittest.TestCase):
 
+    class ConfigTest(Config):
+        @staticmethod
+        def get_filename():
+            return os.path.join(Config.get_dir(), "config.json.example")
+
     def setUp(self):
-        self.config_fname = os.path.join(os.path.dirname(__file__),
-                        "..", "config.json")
-        self.experiments_fname = os.path.join(os.path.dirname(__file__),
-                        "..", "experiments.json")
+        self.config = ConfigTestCase.ConfigTest()
+
+        self.config_fname = os.path.join(os.path.dirname(__file__), "..", "config.json.example")
+        self.experiments_fname = os.path.join(os.path.dirname(__file__), "..", "experiments.json")
 
         def load_json_file(fname):
             with open(fname, 'r') as f:
@@ -19,8 +26,8 @@ class ConfigTestCase(unittest.TestCase):
         self.load_json_file = load_json_file
 
     def test_loading_main_config(self):
-        self.assertTrue(os.path.exists(self.config_fname))
-        data = self.load_json_file(self.config_fname)
+        self.assertTrue(os.path.exists(self.config.get_filename()))
+        data = self.config
         self.assertTrue(isinstance(data, dict))
         self.assertTrue("data_dir" in data)
         self.assertTrue("results_dir" in data)
@@ -32,13 +39,13 @@ class ConfigTestCase(unittest.TestCase):
 
     def test_experiment_configs(self):
         data = self.load_json_file(self.experiments_fname)
-        config = self.load_json_file(self.config_fname)
+        config = self.config
         keys = data.keys()
         for key in keys:
             result = load_experiment_config(self.experiments_fname, [key])
             self.assertTrue(isinstance(result, dict))
             if "dataset" in result:
-                results = experiment_config_parser(result, config['data_dir'])
+                experiment_config_parser(result, config['data_dir'])
 
 
 if __name__ == '__main__':
