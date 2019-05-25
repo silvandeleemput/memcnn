@@ -2,6 +2,9 @@
 MemCNN
 ======
 
+.. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg
+        :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
+        :alt: CircleCI
 
 .. image:: https://img.shields.io/pypi/v/memcnn.svg
         :target: https://pypi.python.org/pypi/memcnn
@@ -13,8 +16,7 @@ MemCNN
         :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
-
+.. image:: https://img.shields.io/github/license/silvandeleemput/memcnn.svg   :alt: GitHub
 
 A PyTorch framework for developing memory efficient deep invertible networks.
 
