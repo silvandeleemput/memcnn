@@ -7,7 +7,7 @@ from setuptools.command.install import install
 VERSION = "0.1.0"
 
 with open("README.rst", 'r') as fh:
-    long_description = fh.read()
+    long_description = fh.read().split("Results\n-------")[0]
 
 
 class VerifyVersionCommand(install):
@@ -25,7 +25,7 @@ class VerifyVersionCommand(install):
 
 
 setup(
-    name='MemCNN',
+    name='memcnn',
     version=VERSION,
     author='S.C. van de Leemput',
     author_email='silvandeleemput@gmail.com',
@@ -58,7 +58,7 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Operating System :: OS Independent"
         ],
-    keywords='MemCNN invertible PyTorch',
+    keywords='memcnn invertible PyTorch',
     cmdclass={
         'verify': VerifyVersionCommand,
     }
