@@ -53,7 +53,8 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            make dev
+            pip install pylint doc8 coverage codecov twine sphinx sphinx-autobuild sphinx_rtd_theme
+            pip install -e .
       - save_cache:
           key: v1-dependency-cache-{{ checksum "setup.py" }}-{{ checksum "Makefile" }}
           paths:
