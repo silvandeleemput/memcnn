@@ -2,19 +2,28 @@
 MemCNN
 ======
 
-.. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg
-        :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
+.. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg        
         :alt: CircleCI
+        :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
+
+.. image:: https://readthedocs.org/projects/memcnn/badge/?version=latest        
+        :alt: Documentation Status
+        :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://img.shields.io/pypi/v/memcnn.svg
         :target: https://pypi.python.org/pypi/memcnn
 
-.. image:: https://readthedocs.org/projects/memcnn/badge/?version=latest
-        :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+.. image:: https://img.shields.io/pypi/implementation/memcnn.svg        
+        :alt: PyPI - Implementation
+        :target: https://pypi.python.org/pypi/memcnn
 
-.. image:: https://img.shields.io/github/license/silvandeleemput/memcnn.svg
+.. image:: https://img.shields.io/pypi/pyversions/memcnn.svg        
+        :alt: PyPI - Python Version
+        :target: https://pypi.python.org/pypi/memcnn
+
+.. image:: https://img.shields.io/github/license/silvandeleemput/memcnn.svg        
         :alt: GitHub
+        :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
 
 A `PyTorch <http://pytorch.org/>`__ framework for developing memory
 efficient deep invertible networks
