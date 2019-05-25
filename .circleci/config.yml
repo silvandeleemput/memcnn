@@ -47,16 +47,16 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-dependency-cache-{{ checksum "setup.py" }}-{{ checksum "Makefile" }}
+          key: v1-dependency-cache-{{ checksum "setup.py" }}
       - run:
           name: install python dependencies
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install pylint doc8 coverage codecov twine sphinx sphinx-autobuild sphinx_rtd_theme
+            pip install pylint doc8 coverage codecov twine
             pip install -e .
       - save_cache:
-          key: v1-dependency-cache-{{ checksum "setup.py" }}-{{ checksum "Makefile" }}
+          key: v1-dependency-cache-{{ checksum "setup.py" }}
           paths:
             - "venv"
       - run:

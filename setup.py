@@ -37,12 +37,12 @@ setup(
     long_description=long_description,
     long_description_content_type='text/x-rst',
     install_requires=[
-        "tensorflow >= 1.11.0"
-        "torch >= 0.4.0",
-        "torchvision >= 0.2.1",
-        "tensorboardX >= 1.4",
-        "SimpleITK >= 1.0.1",
-        "tqdm >= 4.19.5",
+        "tensorflow>=1.11.0"
+        "torch>=0.4.0",
+        "torchvision>=0.2.1",
+        "tensorboardX>=1.4",
+        "SimpleITK>=1.0.1",
+        "tqdm>=4.19.5",
     ],
     classifiers=[
         "License :: OSI Approved :: MIT License",
