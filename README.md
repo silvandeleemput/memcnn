@@ -1,4 +1,8 @@
 # MemCNN
+
+[![CircleCI](https://circleci.com/gh/silvandeleemput/memcnn/tree/master.svg?style=svg)](https://circleci.com/gh/silvandeleemput/memcnn/tree/master)
+
+
 a [PyTorch](http://pytorch.org/) Framework for Developing Memory Efficient Deep Invertible Networks
 
 Reference: Sil C. van de Leemput, Jonas Teuwen, Rashindra Manniesing. [MemCNN: a Framework for Developing Memory Efficient Deep Invertible Networks](https://openreview.net/forum?id=r1KzqK1wz). *International Conference on Learning Representations (ICLR) 2018 Workshop Track. (https://iclr.cc/)*
