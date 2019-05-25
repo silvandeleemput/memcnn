@@ -1,1 +1,1 @@
-v0.1.0, 7-12-2018 -- Initial release on PyPi.
+0.1.0, 25-05-2018 -- Initial release on PyPi.
