@@ -29,9 +29,12 @@ jobs:
       - run:
           name: execute pytests << parameters.tests >>
           command: |
+            mkdir test-reports
             tox -e << parameters.tests >>
+      - store_artifacts:
+          path: htmlcov
       - store_test_results:
-          path: .tox/test/tmp/reports
+          path: test-reports
   builddocs:
     <<: *container_python
     steps:
