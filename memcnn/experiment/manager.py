@@ -5,8 +5,8 @@ import logging
 import shutil
 import numpy as np
 
-class ExperimentManager(object):
 
+class ExperimentManager(object):
     def __init__(self, experiment_dir, model=None, optimizer=None):
         self.logger = logging.getLogger(type(self).__name__)
         self.experiment_dir = experiment_dir
@@ -64,7 +64,8 @@ class ExperimentManager(object):
         self.load_optimizer_state(epoch)
 
     def get_last_model_iteration(self):
-        return np.array([0] + [int(os.path.basename(e).split(".")[0]) for e in glob.glob(os.path.join(self.model_dir, "*.pt"))]).max()
+        return np.array([0] + [int(os.path.basename(e).split(".")[0])
+                               for e in glob.glob(os.path.join(self.model_dir, "*.pt"))]).max()
 
     def load_last_train_state(self):
         self.load_train_state(self.get_last_model_iteration())

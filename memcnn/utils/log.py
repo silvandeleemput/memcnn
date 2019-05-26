@@ -1,6 +1,7 @@
 import logging
 import sys
 
+
 def setup(use_stdout=True, filename=None, log_level=logging.DEBUG):
     """setup some basic logging"""
 
@@ -14,7 +15,7 @@ def setup(use_stdout=True, filename=None, log_level=logging.DEBUG):
         ch.setFormatter(fmt)
         log.addHandler(ch)
 
-    if not filename is None:
+    if filename is not None:
         fh = logging.FileHandler(filename)
         fh.setLevel(log_level)
         fh.setFormatter(fmt)

@@ -19,4 +19,4 @@ class Config(dict):
 
     @staticmethod
     def get_dir():
-        return os.path.join(os.path.dirname(__file__))
+        return os.path.dirname(__file__)

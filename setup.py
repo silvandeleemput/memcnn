@@ -4,10 +4,13 @@ from distutils.core import setup
 from setuptools.command.install import install
 
 # circleci.py version
-VERSION = "0.1.0"
+VERSION = '0.1.0'
 
-with open("README.rst", 'r') as fh:
-    long_description = fh.read().split("Results\n-------")[0]
+with open('README.rst', 'r') as fh:
+    long_description = fh.read().split('Results\n-------')[0]
+
+with open('requirements.txt', 'r') as fh:
+    requirements = [e.strip() for e in fh.readlines() if e.strip() != '']
 
 
 class VerifyVersionCommand(install):
@@ -36,14 +39,7 @@ setup(
     description='A PyTorch framework for developing memory efficient deep invertible networks.',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    install_requires=[
-        "tensorflow>=1.11.0"
-        "torch>=0.4.0",
-        "torchvision>=0.2.1",
-        "tensorboardX>=1.4",
-        "SimpleITK>=1.0.1",
-        "tqdm>=4.19.5",
-    ],
+    install_requires=requirements,
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 2",

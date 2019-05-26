@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data.sampler import Sampler
 
+
 class NSamplesRandomSampler(Sampler):
     """Samples elements randomly, with replacement,
     always in blocks all elements of the dataset.

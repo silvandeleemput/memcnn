@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import copy
 import warnings
-from memcnn.models.utils import set_grad_enabled
+from torch import set_grad_enabled
 import numpy as np
 
 warnings.filterwarnings(action='ignore', category=UserWarning)
@@ -163,7 +163,7 @@ class AffineBlockFunction(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, grad_output):  # pragma: no cover
         # retrieve weight references
         Fm, Gm = ctx.Fm, ctx.Gm
 
@@ -285,7 +285,7 @@ class AffineBlockInverseFunction(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(cty, grad_output):
+    def backward(cty, grad_output):  # pragma: no cover
         # retrieve weight references
         Fm, Gm = cty.Fm, cty.Gm
 
@@ -406,7 +406,7 @@ class AffineBlockFunction2(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, grad_output):  # pragma: no cover
         Fm, Gm = ctx.Fm, ctx.Gm
         # are all variable objects now
         x, output = ctx.saved_tensors
@@ -526,7 +526,7 @@ class AffineBlockInverseFunction2(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(cty, grad_output):
+    def backward(cty, grad_output):  # pragma: no cover
         Fm, Gm = cty.Fm, cty.Gm
         # are all variable objects now
         y, output = cty.saved_tensors

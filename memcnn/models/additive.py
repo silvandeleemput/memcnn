@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import copy
-from memcnn.models.utils import set_grad_enabled
+from torch import set_grad_enabled
 import warnings
 import numpy as np
 
@@ -145,7 +145,7 @@ class AdditiveBlockFunction(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, grad_output):  # pragma: no cover
         # retrieve weight references
         Fm, Gm = ctx.Fm, ctx.Gm
 
@@ -254,7 +254,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(cty, grad_output):
+    def backward(cty, grad_output):  # pragma: no cover
         # retrieve weight references
         Fm, Gm = cty.Fm, cty.Gm
 
@@ -364,7 +364,7 @@ class AdditiveBlockFunction2(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, grad_output):  # pragma: no cover
 
         Fm, Gm = ctx.Fm, ctx.Gm
         # are all variable objects now
@@ -487,7 +487,7 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(cty, grad_output):
+    def backward(cty, grad_output):  # pragma: no cover
 
         Fm, Gm = cty.Fm, cty.Gm
         # are all variable objects now

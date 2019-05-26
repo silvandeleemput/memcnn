@@ -8,6 +8,18 @@ import copy
 
 
 class ReversibleOperationsTestCase(unittest.TestCase):
+    def test_reversible_block_additive_notimplemented(self):
+        fm = torch.nn.Conv2d(10, 10, (3, 3), padding=1)
+        X = torch.zeros(1, 20, 10, 10)
+        with self.assertRaises(NotImplementedError):
+            f = revop.ReversibleBlock(fm, coupling='additive', implementation_bwd=0, implementation_fwd=-2)
+            f.forward(X)
+        with self.assertRaises(NotImplementedError):
+            f = revop.ReversibleBlock(fm, coupling='additive', implementation_bwd=-2, implementation_fwd=0)
+            f.inverse(X)
+        with self.assertRaises(NotImplementedError):
+            revop.ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0)
+
     def test_reversible_block_fwd_bwd(self):
         """ReversibleBlock test of the memory saving forward and backward passes
 

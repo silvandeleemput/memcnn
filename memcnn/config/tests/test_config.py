@@ -3,6 +3,7 @@ import json
 import os
 from memcnn.experiment.factory import load_experiment_config, experiment_config_parser
 from memcnn.config import Config
+import memcnn.config
 
 
 class ConfigTestCase(unittest.TestCase):
@@ -46,6 +47,15 @@ class ConfigTestCase(unittest.TestCase):
             self.assertTrue(isinstance(result, dict))
             if "dataset" in result:
                 experiment_config_parser(result, config['data_dir'])
+
+    def test_config_get_filename(self):
+        self.assertEqual(Config.get_filename(), os.path.join(os.path.dirname(memcnn.config.__file__), "config.json"))
+
+    def test_config_get_dir(self):
+        self.assertEqual(Config.get_dir(), os.path.dirname(memcnn.config.__file__))
+
+    def test_verbose(self):
+        ConfigTestCase.ConfigTest(verbose=True)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ def _assert_no_grad(variable):
         "nn criterions don't compute the gradient w.r.t. targets - please " \
         "mark these variables as not requiring gradients"
 
+
 class CrossEntropyLossTF(Module):
     def __init__(self):
         super(CrossEntropyLossTF, self).__init__()
@@ -20,7 +21,7 @@ class CrossEntropyLossTF(Module):
         if Ypred.is_cuda:
             y_onehot = y_onehot.cuda()
         y_onehot.zero_()
-        y_onehot.scatter_(1, Y.data.view(-1,1), 1)
+        y_onehot.scatter_(1, Y.data.view(-1, 1), 1)
         if W is not None:
             y_onehot = y_onehot * torch.from_numpy(W)
         y_onehot = Variable(y_onehot)

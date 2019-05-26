@@ -3,7 +3,7 @@ import torch.nn as nn
 import warnings
 from memcnn.models.additive import AdditiveBlock
 from memcnn.models.affine import AffineBlock
-from memcnn.models.utils import use_context_mans
+from memcnn.models.utils import pytorch_version_one_and_above
 
 
 warnings.filterwarnings(action='ignore', category=UserWarning)
@@ -56,7 +56,7 @@ class ReversibleBlock(nn.Module):
         y = self.rev_block(x)
         # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
         if not self.keep_input:
-            if not use_context_mans:
+            if not pytorch_version_one_and_above:
                 # PyTorch 0.4 way to clear storage
                 x.data.set_()
             else:
@@ -69,7 +69,7 @@ class ReversibleBlock(nn.Module):
         x = self.rev_block.inverse(y)
         # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
         if not self.keep_input:
-            if not use_context_mans:
+            if not pytorch_version_one_and_above:
                 # PyTorch 0.4 way to clear storage
                 y.data.set_()
             else:

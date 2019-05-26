@@ -2,7 +2,6 @@
 
 Some bits from: https://gist.github.com/xmfbit/67c407e34cbaf56e7820f09e774e56d8
 """
-import torch.nn as nn
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
