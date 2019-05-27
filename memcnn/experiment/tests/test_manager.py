@@ -1,4 +1,3 @@
-import copy
 from memcnn.experiment.manager import ExperimentManager
 import torch.nn
 
@@ -39,13 +38,13 @@ def test_experiment_manager(tmp_path):
     man.load_model_state(0)
     assert man.model.weight.equal(w)
 
-    optimizer = torch.optim.SGD(man.model.parameters(), lr=0.01)
+    optimizer = torch.optim.SGD(man.model.parameters(), lr=0.01, momentum=0.1)
     man.optimizer = optimizer
 
     man.save_train_state(100)
 
     w = man.model.weight.clone()
-    sd = copy.deepcopy(man.optimizer.state_dict())
+    sd = man.optimizer.state_dict().copy()
 
     man.model.train()
 
@@ -62,17 +61,26 @@ def test_experiment_manager(tmp_path):
 
     man.save_train_state(101)
     assert not man.model.weight.equal(w)
-    # assert sd != man.optimizer.state_dict()
+    assert sd != man.optimizer.state_dict()
     w2 = man.model.weight.clone()
-    # sd2 = copy.deepcopy(man.optimizer.state_dict())
+    sd2 = man.optimizer.state_dict().copy()
 
     man.load_train_state(100)
     assert man.model.weight.equal(w)
-    # assert sd == man.optimizer.state_dict()
+    assert sd == man.optimizer.state_dict()
 
     man.load_last_train_state() # should be 101
     assert not man.model.weight.equal(w)
-    # assert sd != man.optimizer.state_dict()
+    assert sd != man.optimizer.state_dict()
     assert man.model.weight.equal(w2)
-    # assert sd2 == man.optimizer.state_dict()
-    # TODO fix state dict optimizer parameters asserts
+    print(sd2)
+    print(man.optimizer.state_dict())
+
+    def retrieve_mom_buffer(sd):
+        keys = [e for e in sd['state'].keys()]
+        if len(keys) == 0:
+            return torch.zero(0)
+        else:
+            return sd['state'][keys[0]]['momentum_buffer']
+
+    assert torch.equal(retrieve_mom_buffer(sd2), retrieve_mom_buffer(man.optimizer.state_dict()))
