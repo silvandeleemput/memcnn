@@ -10,6 +10,10 @@ MemCNN
         :alt: Documentation Status
         :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
 
+.. image:: https://img.shields.io/coveralls/github/silvandeleemput/memcnn/master.svg
+        :alt: Coveralls github branch
+        :target: https://codecov.io/gh/silvandeleemput/memcnn
+
 .. image:: https://img.shields.io/pypi/v/memcnn.svg
         :target: https://pypi.python.org/pypi/memcnn
 
