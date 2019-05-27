@@ -14,6 +14,7 @@ def test_load_experiment_config():
     memcnn.experiment.factory.load_experiment_config(cfg_fname, ['cifar10', 'resnet110'])
 
 
+@pytest.mark.skip(reason="Covered more efficiently by test_train.test_run_experiment")
 def test_experiment_config_parser(tmp_path):
     tmp_data_dir = tmp_path / "tmpdata"
     cfg_fname = os.path.join(Config.get_dir(), 'experiments.json')
