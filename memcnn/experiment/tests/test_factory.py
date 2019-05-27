@@ -24,8 +24,9 @@ def test_experiment_config_parser(tmp_path):
 def test_circular_dependency(tmp_path):
     p = tmp_path / "circular.json"
     content = u'{ "circ": { "base": "circ" } }'
-    with open(p, 'w') as fh:
+    with open(str(p), 'w') as fh:
         fh.write(content)
-    assert p.read_text() == content
+    with open(str(p), 'r') as fh:
+        assert fh.read() == content
     with pytest.raises(RuntimeError):
         memcnn.experiment.factory.load_experiment_config(p, ['circ'])

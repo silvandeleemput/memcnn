@@ -55,7 +55,7 @@ def test_experiment_manager(tmp_path):
     y.requires_grad = False
 
     ypred = man.model(x)
-    loss = torch.nn.MSELoss()(y, ypred)
+    loss = torch.nn.MSELoss()(ypred, y)
     man.optimizer.zero_grad()
     loss.backward()
     man.optimizer.step()
