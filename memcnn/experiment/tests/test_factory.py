@@ -18,13 +18,14 @@ def test_experiment_config_parser(tmp_path):
     tmp_data_dir = tmp_path / "tmpdata"
     cfg_fname = os.path.join(Config.get_dir(), 'experiments.json')
     cfg = memcnn.experiment.factory.load_experiment_config(cfg_fname, ['cifar10', 'resnet110'])
-    memcnn.experiment.factory.experiment_config_parser(cfg, tmp_data_dir, workers=None)
+    memcnn.experiment.factory.experiment_config_parser(cfg, str(tmp_data_dir), workers=None)
 
 
 def test_circular_dependency(tmp_path):
     p = tmp_path / "circular.json"
-    content = '{ "circ": { "base": "circ" } }'
-    p.write_text(content)
+    content = u'{ "circ": { "base": "circ" } }'
+    with open(p, 'w') as fh:
+        fh.write(content)
     assert p.read_text() == content
     with pytest.raises(RuntimeError):
         memcnn.experiment.factory.load_experiment_config(p, ['circ'])

@@ -5,7 +5,7 @@ import torch.nn
 
 def test_experiment_manager(tmp_path):
     exp_dir = tmp_path / "test_exp_dir"
-    man = ExperimentManager(exp_dir)
+    man = ExperimentManager(str(exp_dir))
     assert man.model is None
     assert man.optimizer is None
 
@@ -50,7 +50,9 @@ def test_experiment_manager(tmp_path):
     man.model.train()
 
     x = torch.ones(5, 2, 5, 5)
+    x.requires_grad = True
     y = torch.ones(5, 1, 3, 3)
+    y.requires_grad = False
 
     ypred = man.model(x)
     loss = torch.nn.MSELoss()(y, ypred)
