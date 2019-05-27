@@ -48,15 +48,13 @@ def run_experiment(experiment_tags, data_dir, results_dir, start_fresh=False, us
     trainer(manager, start_iter=last_iter, use_cuda=use_cuda, *args, **trainer_params)
 
 
-def main():
+def main(data_dir, results_dir):
     # setup logging
     memcnn.utils.log.setup(True)
 
     # specify defaults for arguments
     use_cuda = torch.cuda.is_available()
     workers = 16
-    data_dir = Config()['data_dir']
-    results_dir = Config()['results_dir']
     experiments_file = os.path.join(os.path.dirname(__file__), 'config', 'experiments.json')
     start_fresh = False
 
@@ -96,4 +94,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(data_dir=Config()['data_dir'],
+         results_dir=Config()['results_dir'])

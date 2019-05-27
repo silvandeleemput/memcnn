@@ -13,7 +13,6 @@ Github: https://github.com/renmengye/revnet-public
 Author: Sil van de Leemput
 
 """
-import torch
 import torch.nn as nn
 import math
 from memcnn.models.revop import ReversibleBlock
@@ -91,6 +90,7 @@ class RevBasicBlock(nn.Module):
         else:
             out = self.revblock(x)
         return out
+
 
 class RevBottleneck(nn.Module):
     expansion = 4
@@ -201,7 +201,6 @@ class ResNet(nn.Module):
         self.configure()
         self.init_weights()
 
-
     def init_weights(self):
         """Initialization using He initialization"""
         for m in self.modules():
@@ -210,7 +209,6 @@ class ResNet(nn.Module):
                 m.weight.data.normal_(0, math.sqrt(2. / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.reset_parameters()
-
 
     def configure(self):
         """Initialization specific configuration settings"""
@@ -233,8 +231,7 @@ class ResNet(nn.Module):
                           kernel_size=1, stride=stride, bias=False),
                 batch_norm(planes * block.expansion),
             )
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, noactivation))
+        layers = [block(self.inplanes, planes, stride, downsample, noactivation)]
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes))
