@@ -93,23 +93,47 @@ workflows:
       - testing:
           name: testing_py27_torch04
           tests: py27-torch04
+          filters:
+            tags:
+              only: /.*/
       - testing:
           name: testing_py27_torch10
           tests: py27-torch10
+          filters:
+            tags:
+              only: /.*/
       - testing:
           name: testing_py27_torch11
           tests: py27-torch11
+          filters:
+            tags:
+              only: /.*/
       - testing:
           name: testing_py36_torch04
           tests: py36-torch04
+          filters:
+            tags:
+              only: /.*/
       - testing:
           name: testing_py36_torch10
           tests: py36-torch10
+          filters:
+            tags:
+              only: /.*/
       - testing:
           name: testing_py36_torch11
           tests: py36-torch11
-      - builddocs
+          filters:
+            tags:
+              only: /.*/
       - deploy:
+          requires:
+            - testing_py27_torch04
+            - testing_py27_torch10
+            - testing_py27_torch11
+            - testing_py36_torch04
+            - testing_py36_torch10
+            - testing_py36_torch11
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/
