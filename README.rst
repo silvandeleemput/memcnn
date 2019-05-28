@@ -34,6 +34,8 @@ efficient deep invertible networks
 
 * Free software: MIT license
 * Documentation: https://memcnn.readthedocs.io.
+* Installation: https://memcnn.readthedocs.io/en/latest/installation.html
+
 
 Reference: Sil C. van de Leemput, Jonas Teuwen, Rashindra Manniesing.
 `MemCNN: a Framework for Developing Memory Efficient Deep Invertible
@@ -51,65 +53,11 @@ please cite our work.
 Features
 --------
 
-* TODO
-
-Installation
-------------
-
-Using NVIDIA docker
-~~~~~~~~~~~~~~~~~~~
-
-Requirements
-^^^^^^^^^^^^
-
--  NVIDIA graphics card and the proper NVIDIA-drivers on your system
--  `nvidia-docker <https://github.com/nvidia/nvidia-docker>`__ installed
-   on your system
-
-The following bash commands will clone this repository and do a one-time
-build of the docker image with the right environment installed:
-
-.. code:: bash
-
-    git clone https://github.com/silvandeleemput/memcnn.git
-    docker build ./memcnn/docker --tag=memcnn-docker
-
-After the one-time install on your machine, the docker can be invoked
-by:
-
-.. code:: bash
-
-    docker run --shm-size=4g --runtime=nvidia -it memcnn-docker
-
-This will open a preconfigured bash shell, which is correctly configured
-to run the experiments from the next section.
-
-The datasets and experimental results will be put inside the created
-docker container under: ``\home\user\data`` and
-``\home\user\experiments`` respectively
-
-Using a Custom environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Requirements
-^^^^^^^^^^^^
-
--  `Python <https://python.org/>`__ 2.7 or 3.5+
--  `PyTorch <http://pytorch.org/>`__ 1.1 (0.4 downwards compatible, CUDA
-   support recommended)
--  `torchvision <https://github.com/pytorch/vision>`__ 0.1.9
--  `TensorboardX <https://github.com/lanpa/tensorboard-pytorch>`__ 0.9
-
-Clone the repository and navigate to the right folder to execute the
-experiments:
-
-.. code:: bash
-
-    git clone https://github.com/silvandeleemput/memcnn.git
-    cd ./memcnn/memcnn
-
-Note that the location of the cloned repository has to be added to your
-Python path.
+* Simple `ReversibleBlock` wrapper class to wrap and convert arbitrary PyTorch Modules to invertible versions.
+* Simple switching between `additive` and `affine` invertible coupling schemes and different implementations.
+* Simple toggling of memory saving by setting the `keep_input` property of the `ReversibleBlock`.
+* Train and evaluation code for reproducing RevNet experiments using MemCNN.
+* CI tests for Python v2.7 and v3.6 and torch v0.4, v1.0, and v1.1.
 
 Example usage: ReversibleBlock
 ------------------------------
@@ -119,7 +67,6 @@ Example usage: ReversibleBlock
     # some required imports
     import torch
     import torch.nn as nn
-    from torch.autograd import Variable
     import numpy as np
     import memcnn.models.revop
 
@@ -141,14 +88,14 @@ Example usage: ReversibleBlock
 
     # generate some random input data (b, c, y, x)
     data = np.random.random((2, 10, 8, 8)).astype(np.float32)
-    X = Variable(torch.from_numpy(data))
+    X = torch.from_numpy(data)
 
     # application of the operation(s) the normal way
     Y = ExampleOperation(channels=10)(X)
 
     # application of the operation(s) using the reversible block
     F, G = ExampleOperation(channels=10 // 2), ExampleOperation(channels=10 // 2)
-    Y = memcnn.models.revop.ReversibleBlock(F, G)(X)
+    Y = memcnn.models.revop.ReversibleBlock(F, G, coupling='additive')(X)
 
 Run PyTorch Experiments
 -----------------------
@@ -204,11 +151,21 @@ Memory consumption of model training in PyTorch
         <tr><td> revnet-164 </td><td> 1226     </td></tr>
         </table>
 
-Future Releases
----------------
+Works using MemCNN
+------------------
 
--  Support for other reversible networks
--  Better support for non volume preserving mappings
+* `Reversible GANs for Memory-efficient Image-to-Image Translation<https://arxiv.org/abs/1902.02729>`__ by
+
+.. code:: bibtex
+
+    @inproceedings{vanderOuderaa2019revgan,
+      title={Reversible GANs for Memory-efficient Image-to-Image Translation},
+      author={Tycho F A van der Ouderaa, Daniel E Worrall},
+      booktitle={CVPR 2019},
+      year={2019},
+      url={https://arxiv.org/abs/1902.02729}
+    }
+
 
 Citation
 --------
