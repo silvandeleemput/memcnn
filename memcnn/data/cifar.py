@@ -17,8 +17,10 @@ def get_cifar_data_loaders(dataset, data_dir, max_epoch, batch_size, workers):
     train_set = dataset(root=data_dir, train=True, download=True)
     valid_set = dataset(root=data_dir, train=False, download=True)
 
-    # calculate mean subtraction img...
-    mean_img = np.concatenate((train_set.train_data, valid_set.test_data), axis=0).mean(axis=0)
+    # calculate mean subtraction img with backwards compatibility for torchvision < 0.2.2
+    tdata = train_set.train_data if hasattr(train_set, 'train_data') else train_set.data
+    vdata = valid_set.test_data if hasattr(valid_set, 'test_data') else valid_set.data
+    mean_img = np.concatenate((tdata, vdata), axis=0).mean(axis=0)
 
     # define transforms
     randomcroplambda = transforms.Lambda(lambda x: random_crop_transform(x))
