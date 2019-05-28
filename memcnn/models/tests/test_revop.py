@@ -1,10 +1,14 @@
 import pytest
 import torch
 import torch.nn
-from torch.autograd import Variable
 import memcnn.models.revop as revop
 import numpy as np
 import copy
+
+
+def set_seeds(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
@@ -47,7 +51,8 @@ def test_reversible_block_fwd_bwd(coupling):
     Gm = SubModule()
 
     s_grad = [p.data.numpy().copy() for p in Gm.parameters()]
-    for _ in range(10):
+    for seed in range(10):
+        set_seeds(seed)
         for bwd in [False, True]:
             impl_out, impl_grad = [], []
             for keep_input_sub in [False, True]:
@@ -56,8 +61,8 @@ def test_reversible_block_fwd_bwd(coupling):
                         keep_input = keep_input_sub or implementation_bwd == -1 or implementation_fwd == -1
                         # print(bwd, coupling, keep_input, implementation_fwd, implementation_bwd)
                         # test with zero padded convolution
-                        X = Variable(torch.from_numpy(data.copy()))
-                        Ytarget = Variable(torch.from_numpy(target_data.copy()))
+                        X = torch.from_numpy(data.copy())
+                        Ytarget = torch.from_numpy(target_data.copy())
                         Xshape = X.shape
                         Gm2 = copy.deepcopy(Gm)
                         rb = revop.ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
@@ -111,12 +116,13 @@ def test_reversible_block_fwd_bwd(coupling):
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
 def test_revblock_chained(coupling):
+    set_seeds(42)
     dims = (2, 10, 8, 8)
     data = np.random.random(dims).astype(np.float32)
     target_data = np.random.random(dims).astype(np.float32)
 
-    X = Variable(torch.from_numpy(data.copy()))
-    Ytarget = Variable(torch.from_numpy(target_data.copy()))
+    X = torch.from_numpy(data.copy())
+    Ytarget = torch.from_numpy(target_data.copy())
 
     class SubModule(torch.nn.Module):
         def __init__(self):
@@ -165,11 +171,12 @@ def test_revblock_simple_inverse(coupling):
     * test inversion Y = RB(X) and X = RB.inverse(Y)
 
     """
-    for _ in range(10):
+    for seed in range(10):
+        set_seeds(seed)
         for implementation_fwd in [-1, 0, 1]:
             for implementation_bwd in [-1, 0, 1]:
                 # define some data
-                X = Variable(torch.rand(2, 4, 5, 5))
+                X = torch.rand(2, 4, 5, 5)
 
                 # define an arbitrary reversible function
                 fn = revop.ReversibleBlock(torch.nn.Conv2d(2, 2, 3, padding=1), keep_input=False, coupling=coupling,
@@ -197,8 +204,10 @@ def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
     * test if recreated input and produced output are contiguous
 
     """
-    for _ in range(10):
-        X = Variable(torch.rand(2, 4, 5, 5))
+    for seed in range(10):
+        set_seeds(seed)
+
+        X = torch.rand(2, 4, 5, 5)
 
         # define models and their copies
         c1 = torch.nn.Conv2d(2, 2, 3, padding=1)
@@ -228,7 +237,8 @@ def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
         loss2 = torch.mean(Y)
 
         # define the reversible function without custom backprop and define graph for model 2
-        XX = Variable(X.clone().data, requires_grad=True)
+        XX = X.clone().data
+        XX.requires_grad = True
         x1, x2 = torch.chunk(XX, 2, dim=1)
         if coupling == 'additive':
             y1 = x1 + c1.forward(x2)

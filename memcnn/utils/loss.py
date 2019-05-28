@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 from torch.nn.modules.module import Module
 
 
@@ -22,5 +21,4 @@ class CrossEntropyLossTF(Module):
         y_onehot.scatter_(1, Y.data.view(-1, 1), 1)
         if W is not None:
             y_onehot = y_onehot * W
-        y_onehot = Variable(y_onehot)
         return torch.mean(-y_onehot * torch.log(lsm(Ypred))) * Ypred.shape[1]

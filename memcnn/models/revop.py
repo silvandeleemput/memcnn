@@ -24,7 +24,6 @@ class ReversibleBlock(nn.Module):
 
             coupling: str
                 Type of coupling ['additive', 'affine']. Default = 'additive'
-                'affine' is currently experimental
 
             keep_input : bool
                 Retain the input information, by default it can be discarded since it will be

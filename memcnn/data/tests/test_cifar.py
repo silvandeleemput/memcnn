@@ -7,6 +7,7 @@ from PIL import Image
 
 @pytest.mark.parametrize('crop_size,img_size', [(4, (32, 32)), (0, (32, 32))])
 def test_random_crop_transform(crop_size, img_size):
+    np.random.seed(42)
     img = np.random.random((img_size[0], img_size[1], 3))
     imgres = random_crop_transform(img, crop_size, img_size)
     assert imgres.shape == img.shape
@@ -17,6 +18,7 @@ def test_random_crop_transform(crop_size, img_size):
 
 @pytest.mark.parametrize('max_epoch,batch_size', [(10, 2), (20, 4), (1, 1)])
 def test_cifar_data_loaders(max_epoch, batch_size):
+    np.random.seed(42)
 
     class TestDataset(data.Dataset):
         def __init__(self, train=True, *args, **kwargs):
