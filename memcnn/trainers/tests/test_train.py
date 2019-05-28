@@ -2,6 +2,7 @@ import pytest
 from memcnn.train import run_experiment, main
 import os
 import sys
+import torch
 
 
 def test_main(tmp_path):
@@ -27,22 +28,32 @@ class DummyDataset(object):
         pass
 
 
+class DummyModel(torch.nn.Module):
+    def __init__(self, block):
+        super(DummyModel, self).__init__()
+        self.block = block
+        self.conv = torch.nn.Conv2d(1, 1, 1)
+
+    def forward(self, x):
+        return self.conv(x)
+
+
 content = '{' \
            '    "testsetup":' \
            '    {' \
            '        "data_loader_params": {},' \
-           '        "model": "torch.nn.Conv2d",' \
+           '        "model": "memcnn.trainers.tests.test_train.DummyModel",' \
            '        "model_params": {' \
-           '            "in_channels":1,' \
-           '            "out_channels":1,' \
-           '            "kernel_size":1' \
+           '            "block":"memcnn.trainers.tests.test_train.DummyDataset"' \
            '        },' \
            '        "optimizer": "torch.optim.SGD",' \
            '        "optimizer_params": {' \
            '            "lr":0.1' \
            '        },' \
            '        "trainer": "memcnn.trainers.tests.test_train.dummy_trainer",' \
-           '        "trainer_params":{},' \
+           '        "trainer_params":{' \
+           '            "loss":"memcnn.trainers.tests.test_train.DummyDataset"' \
+           '        },' \
            '        "data_loader": "memcnn.trainers.tests.test_train.dummy_dataloaders",' \
            '        "data_loader_params": {"dataset": "memcnn.trainers.tests.test_train.DummyDataset", "workers":0}' \
            '    }' \

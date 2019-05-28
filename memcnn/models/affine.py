@@ -572,13 +572,13 @@ class AffineBlockInverseFunction2(torch.autograd.Function):
 
             # calculate the final gradients for the weights and inputs
             dd = torch.autograd.grad(x1_, (z1_stop,) + tuple(Fm.parameters()), x1_grad)
-            z1_grad = dd[0] + x2_grad  # + or - ?
+            z1_grad = dd[0] + x2_grad
             FWgrads = dd[1:]
 
             dd = torch.autograd.grad(x2_, (y2_stop, y1_stop) + tuple(Gm.parameters()), z1_grad, retain_graph=False)
 
             GWgrads = dd[2:]
-            y1_grad = dd[1] + x1_grad  # + or - ?
+            y1_grad = dd[1] + x1_grad
             y2_grad = dd[0]
 
             grad_input = torch.cat([y1_grad, y2_grad], dim=1)
