@@ -93,6 +93,6 @@ def main(data_dir, results_dir):
         use_cuda=args.use_cuda, workers=args.workers)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     main(data_dir=Config()['data_dir'],
          results_dir=Config()['results_dir'])
