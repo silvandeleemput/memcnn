@@ -66,7 +66,7 @@ class MemReporter(object):
         objects = gc.get_objects()
         tensors = [obj for obj in objects if isinstance(obj, torch.Tensor)]
         for t in tensors:
-            self.device_mapping[t.device].append(t)
+            self.device_mapping[str(t.device)].append(t)
 
     def get_stats(self):
         """Get the memory stat of tensors and then release them
@@ -165,8 +165,8 @@ class MemReporter(object):
             ))
 
             if device != torch.device('cpu'):
-                with torch.cuda.device(device):
-                    memory_allocated = torch.cuda.memory_allocated()
+                # with torch.cuda.device(device): NOTE not supported in
+                memory_allocated = torch.cuda.memory_allocated()
                 print('The allocated memory on {}: {}'.format(
                     device, readable_size(memory_allocated),
                 ))
@@ -272,7 +272,6 @@ def test_memory_saving(device, coupling, implementation_fwd, keep_input):
 
     y = network(xx)
     gc.collect()
-
     mem_after_forward = mem_reporter.collect_stats() / float(1024 ** 2) if not device == 'cuda' else \
         torch.cuda.memory_allocated() / float(1024 ** 2)
     loss = torch.nn.MSELoss()(y, ytarget)
@@ -285,7 +284,7 @@ def test_memory_saving(device, coupling, implementation_fwd, keep_input):
     gc.enable()
 
     if device == 'cpu':
-        memuse = 0.025
+        memuse = 0.02
 
     if keep_input:
         assert mem_after_forward - mem_start >= memuse
