@@ -17,4 +17,3 @@ twine
 pytest
 pytest-cov
 pytest-runner
-psutil
