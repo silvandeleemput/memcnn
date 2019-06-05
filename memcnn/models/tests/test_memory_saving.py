@@ -1,12 +1,11 @@
 import pytest
-import os
-import platform
 import gc
-import multiprocessing as mp
-import sys
 import numpy as np
 import math
 from collections import defaultdict
+import torch
+import torch.nn
+import memcnn.models.revop as revop
 
 
 def readable_size(num_bytes):
@@ -199,35 +198,11 @@ class MemReporter(object):
         self.print_stats(verbose)
 
 
-def memory_usage_psutil():
-    """return the memory usage of the active process in MB"""
-    import psutil
-    process = psutil.Process(os.getpid())
-    func = process.memory_full_info if platform.system() == 'Linux' else process.memory_info
-    return func()[0] / float(2 ** 20)
-
-
-@pytest.mark.parametrize('device', ['cpu', 'cuda'])
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
 @pytest.mark.parametrize('implementation_fwd', [0, 1])
 @pytest.mark.parametrize('keep_input', [True, False])
+@pytest.mark.parametrize('device', ['cpu', 'cuda'])
 def test_memory_saving(device, coupling, implementation_fwd, keep_input):
-    """Tests memory saving features of the reversible blocks
-
-    * This spawns a new process for each test
-    * Wrapping in a process is necessary to get reliable CPU RAM estimates.
-    * No calls to torch can be made outside of the processes, because it will yield torch cuda init errors
-
-    """
-    p = mp.Process(target=memory_saving_sub, args=(device, coupling, implementation_fwd, keep_input))
-    p.start()
-    p.join()
-    if p.exitcode == 42:
-        pytest.skip('This test requires a GPU to be available')
-    assert p.exitcode == 0
-
-
-def memory_saving_sub(device, coupling, implementation_fwd, keep_input):
     """Test memory saving of the reversible block
 
     * tests fitting a large number of images by creating a deep network requiring large
@@ -245,14 +220,11 @@ def memory_saving_sub(device, coupling, implementation_fwd, keep_input):
       keep_input=(True|False), however it greatly underestimates the total memory consumptions w.r.t. the GPU RAM
       estimates using PyTorch cuda module. It appears to be missing some tensors.
       FIXME CPU Ram estimates - Sil
-    * this function is intended to be boxed inside a separate process to tie the memory usage to the process
 
     """
-    import torch
-    import torch.nn
-    import memcnn.models.revop as revop
+
     if device == 'cuda' and not torch.cuda.is_available():
-        sys.exit(42)
+        pytest.skip('This test requires a GPU to be available')
 
     mem_reporter = MemReporter()
 
@@ -320,5 +292,3 @@ def memory_saving_sub(device, coupling, implementation_fwd, keep_input):
     else:
         assert mem_after_forward - mem_start < (1 if device == 'cuda' else memuse)
     # assert math.floor(mem_after_backward - mem_start) >= 9
-
-    sys.exit(0)
