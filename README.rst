@@ -154,18 +154,8 @@ Memory consumption of model training in PyTorch
 Works using MemCNN
 ------------------
 
-* `Reversible GANs for Memory-efficient Image-to-Image Translation<https://arxiv.org/abs/1902.02729>`__ by
-
-.. code:: bibtex
-
-    @inproceedings{vanderOuderaa2019revgan,
-      title={Reversible GANs for Memory-efficient Image-to-Image Translation},
-      author={Tycho F A van der Ouderaa, Daniel E Worrall},
-      booktitle={CVPR 2019},
-      year={2019},
-      url={https://arxiv.org/abs/1902.02729}
-    }
-
+* `MemCNN: a Framework for Developing Memory Efficient Deep Invertible Networks <https://openreview.net/forum?id=r1KzqK1wz>`__ by Sil C. van de Leemput
+* `Reversible GANs for Memory-efficient Image-to-Image Translation <https://arxiv.org/abs/1902.02729>`__ by Tycho van der Ouderaa
 
 Citation
 --------
