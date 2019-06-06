@@ -4,7 +4,7 @@ from distutils.core import setup
 from setuptools.command.install import install
 
 # circleci.py version
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 
 with open('README.rst', 'r') as fh:
     long_description = fh.read().split('Results\n-------')[0]
