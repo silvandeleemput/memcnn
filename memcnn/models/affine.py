@@ -8,22 +8,41 @@ import numpy as np
 warnings.filterwarnings(action='ignore', category=UserWarning)
 
 
-class NN(nn.Module):
-    """ Affine subnetwork:
+class AffineAdapterNaive(nn.Module):
+    """ Naive Affine adapter
+
         Outputs exp(f(x)), f(x) given f(.) and x
     """
     def __init__(self, module):
-        super(NN, self).__init__()
-        self.NN_t = module
+        super(AffineAdapterNaive, self).__init__()
+        self.f = module
 
     def forward(self, x):
-        t = self.NN_t(x)
+        t = self.f(x)
         s = torch.exp(t)
         return s, t
 
 
+class AffineAdapterSigmoid(nn.Module):
+    """ Sigmoid based affine adapter
+
+        Partitions the output h of f(x) = h into s and t by extracting every odd and even channel
+        Outputs sigmoid(s), t
+    """
+    def __init__(self, module):
+        super(AffineAdapterSigmoid, self).__init__()
+        self.f = module
+
+    def forward(self, x):
+        h = self.f(x)
+        assert h.shape[1] % 2 == 0
+        scale = torch.sigmoid(h[:, 1::2, :] + 2.0)
+        shift = h[:, 0::2, :]
+        return scale, shift
+
+
 class AffineBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation_fwd=1, implementation_bwd=1):
+    def __init__(self, Fm, Gm=None, adapter=None, implementation_fwd=1, implementation_bwd=1):
         """The AffineBlock
 
         Parameters
@@ -35,20 +54,25 @@ class AffineBlock(nn.Module):
                 A torch.nn.Module encapsulating an arbitrary function
                 (If not specified a deepcopy of Gm is used as a Module)
 
+            adapter : torch.nn.Module class
+                An optional wrapper class A for Fm and Gm which must output
+                s, t = A(x) with shape(s) = shape(t) = shape(x)
+                s, t are respectively the scale and shift tensors for the affine coupling.
+
             implementation_fwd : int
                 Switch between different Affine Operation implementations for forward pass. Default = 1
 
             implementation_bwd : int
                 Switch between different Affine Operation implementations for inverse pass. Default = 1
 
-
         """
         super(AffineBlock, self).__init__()
         # mirror the passed module, without parameter sharing...
         if Gm is None:
             Gm = copy.deepcopy(Fm)
-        self.Gm = NN(Gm)
-        self.Fm = NN(Fm)
+        # apply the adapter class if it is given
+        self.Gm = adapter(Gm) if adapter is not None else Gm
+        self.Fm = adapter(Fm) if adapter is not None else Fm
         self.implementation_fwd = implementation_fwd
         self.implementation_bwd = implementation_bwd
 
@@ -124,7 +148,7 @@ class AffineBlockFunction(torch.autograd.Function):
         Note
         ----
         All tensor/autograd variable input arguments and the output are
-        TorchTensors for the scope of this fuction
+        TorchTensors for the scope of this function
 
         """
         # check if possible to partition into two equally sized partitions

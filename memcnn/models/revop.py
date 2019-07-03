@@ -10,7 +10,8 @@ warnings.filterwarnings(action='ignore', category=UserWarning)
 
 
 class ReversibleBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, coupling='additive', keep_input=False, implementation_fwd=1, implementation_bwd=1):
+    def __init__(self, Fm, Gm=None, coupling='additive', keep_input=False,
+                 implementation_fwd=1, implementation_bwd=1, adapter=None):
         """The ReversibleBlock
 
         Parameters
@@ -41,13 +42,21 @@ class ReversibleBlock(nn.Module):
                  0 : Memory efficient implementation, compute gradients directly on y
                  1 : Memory efficient implementation, similar to approach in Gomez et al. 2017
 
+            adapter : torch.nn.Module class
+                Only relevant when using the 'affine' coupling
+                An optional wrapper class A for Fm and Gm which must output
+                s, t = A(x) with shape(s) = shape(t) = shape(x)
+                s, t are respectively the scale and shift tensors for the affine coupling.
+
         """
         super(ReversibleBlock, self).__init__()
         self.keep_input = keep_input
         if coupling == 'additive':
-            self.rev_block = AdditiveBlock(Fm, Gm, implementation_fwd, implementation_bwd)
+            self.rev_block = AdditiveBlock(Fm, Gm,
+                                           implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
         elif coupling == 'affine':
-            self.rev_block = AffineBlock(Fm, Gm, implementation_fwd, implementation_bwd)
+            self.rev_block = AffineBlock(Fm, Gm, adapter=adapter,
+                                         implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
         else:
             raise NotImplementedError('Unknown coupling method: %s' % coupling)
 

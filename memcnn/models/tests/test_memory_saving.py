@@ -6,6 +6,7 @@ from collections import defaultdict
 import torch
 import torch.nn
 import memcnn.models.revop as revop
+from memcnn.models.affine import AffineAdapterNaive
 
 
 def readable_size(num_bytes):
@@ -251,7 +252,7 @@ def test_memory_saving(device, coupling, implementation_fwd, keep_input):
             super(SubModuleStack, self).__init__()
             self.stack = torch.nn.Sequential(
                 *[revop.ReversibleBlock(gm, gm, coupling=coupling, implementation_fwd=implementation_fwd,
-                                        implementation_bwd=implementation_bwd,
+                                        implementation_bwd=implementation_bwd, adapter=AffineAdapterNaive,
                                         keep_input=keep_input) for _ in range(depth)]
             )
 
