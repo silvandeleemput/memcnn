@@ -62,63 +62,72 @@ def test_reversible_block_fwd_bwd(coupling, adapter):
         for bwd in [False, True]:
             impl_out, impl_grad = [], []
             for keep_input_sub in [False, True]:
-                for implementation_fwd in [-1, 0, 1]:
-                    for implementation_bwd in [-1, 0, 1]:
-                        keep_input = keep_input_sub or implementation_bwd == -1 or implementation_fwd == -1
-                        # print(bwd, coupling, keep_input, implementation_fwd, implementation_bwd)
-                        # test with zero padded convolution
-                        X = torch.from_numpy(data.copy())
-                        Ytarget = torch.from_numpy(target_data.copy())
-                        Xshape = X.shape
-                        Gm2 = copy.deepcopy(Gm)
-                        rb = revop.ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
-                                                   implementation_bwd=implementation_bwd, adapter=adapter,
-                                                   keep_input=keep_input)
-                        rb.train()
-                        rb.zero_grad()
+                for keep_input_inverse_sub in [False, True]:
+                    for implementation_fwd in [-1, 0, 1]:
+                        for implementation_bwd in [-1, 0, 1]:
+                            keep_input = keep_input_sub or implementation_fwd == -1
+                            keep_input_inverse = keep_input_inverse_sub or implementation_bwd == -1
+                            # print(bwd, coupling, keep_input, implementation_fwd, implementation_bwd)
+                            # test with zero padded convolution
+                            X = torch.from_numpy(data.copy())
+                            Ytarget = torch.from_numpy(target_data.copy())
+                            Xshape = X.shape
+                            Gm2 = copy.deepcopy(Gm)
+                            rb = revop.ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
+                                                       implementation_bwd=implementation_bwd, adapter=adapter,
+                                                       keep_input=keep_input, keep_input_inverse=keep_input_inverse)
+                            rb.train()
+                            rb.zero_grad()
 
-                        optim = torch.optim.RMSprop(rb.parameters())
-                        optim.zero_grad()
-                        if not bwd:
-                            Xin = X.clone()
-                            Y = rb(Xin)
-                            Yrev = Y.clone()
-                            Xinv = rb.inverse(Yrev)
-                        else:
-                            Xin = X.clone()
-                            Y = rb.inverse(Xin)
-                            Yrev = Y.clone()
-                            Xinv = rb(Yrev)
-                        loss = torch.nn.MSELoss()(Y, Ytarget)
+                            optim = torch.optim.RMSprop(rb.parameters())
+                            optim.zero_grad()
+                            if not bwd:
+                                Xin = X.clone()
+                                Y = rb(Xin)
+                                Yrev = Y.clone()
+                                Xinv = rb.inverse(Yrev)
+                            else:
+                                Xin = X.clone()
+                                Y = rb.inverse(Xin)
+                                Yrev = Y.clone()
+                                Xinv = rb(Yrev)
+                            loss = torch.nn.MSELoss()(Y, Ytarget)
 
-                        # has input been retained/discarded after forward (and backward) passes?
-                        if keep_input:
-                            assert Xin.data.shape == Xshape
-                            assert Y.data.shape == Yrev.shape
-                        else:
-                            assert len(Xin.data.shape) == 0 \
-                                   or (len(Xin.data.shape) == 0 and Xin.data.shape[0] == 0) \
-                                   or Xin.storage().size() == 0
-                            assert len(Yrev.data.shape) == 0 \
-                                   or (len(Yrev.data.shape) == 0 and Yrev.data.shape[0] == 0) \
-                                   or Yrev.storage().size() == 0
+                            # has input been retained/discarded after forward (and backward) passes?
 
-                        optim.zero_grad()
-                        loss.backward()
-                        optim.step()
+                            if keep_input:
+                                assert Xin.data.shape == Xshape
+                                assert Y.data.shape == Yrev.shape
 
-                        assert Y.shape == Xshape
-                        assert X.data.numpy().shape == data.shape
-                        assert np.allclose(X.data.numpy(), data, atol=1e-06)
-                        assert np.allclose(X.data.numpy(), Xinv.data.numpy(), atol=1e-05)
-                        impl_out.append(Y.data.numpy().copy())
-                        impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
-                        assert not np.allclose(impl_grad[-1][0], s_grad[0])
+                            def test_memory_cleared(var, isclear):
+                                if isclear:
+                                    assert var.storage().size() == 0
+                                else:
+                                    assert var.storage().size() > 0
 
-                # output and gradients similar over all implementations?
-                for i in range(0, len(impl_grad) - 1, 1):
-                    assert np.allclose(impl_grad[i][0], impl_grad[i + 1][0])
-                    assert np.allclose(impl_out[i], impl_out[i + 1])
+                            if not bwd:
+                                test_memory_cleared(Xin, not keep_input)
+                                test_memory_cleared(Yrev, not keep_input_inverse)
+                            else:
+                                test_memory_cleared(Yrev, not keep_input)
+                                test_memory_cleared(Xin, not keep_input_inverse)
+
+                            optim.zero_grad()
+                            loss.backward()
+                            optim.step()
+
+                            assert Y.shape == Xshape
+                            assert X.data.numpy().shape == data.shape
+                            assert np.allclose(X.data.numpy(), data, atol=1e-06)
+                            assert np.allclose(X.data.numpy(), Xinv.data.numpy(), atol=1e-05)
+                            impl_out.append(Y.data.numpy().copy())
+                            impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
+                            assert not np.allclose(impl_grad[-1][0], s_grad[0])
+
+                    # output and gradients similar over all implementations?
+                    for i in range(0, len(impl_grad) - 1, 1):
+                        assert np.allclose(impl_grad[i][0], impl_grad[i + 1][0])
+                        assert np.allclose(impl_out[i], impl_out[i + 1])
 
 
 @pytest.mark.parametrize('coupling,adapter', [('additive', None),

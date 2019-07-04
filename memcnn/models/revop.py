@@ -10,7 +10,7 @@ warnings.filterwarnings(action='ignore', category=UserWarning)
 
 
 class ReversibleBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, coupling='additive', keep_input=False,
+    def __init__(self, Fm, Gm=None, coupling='additive', keep_input=False, keep_input_inverse=False,
                  implementation_fwd=1, implementation_bwd=1, adapter=None):
         """The ReversibleBlock
 
@@ -27,7 +27,11 @@ class ReversibleBlock(nn.Module):
                 Type of coupling ['additive', 'affine']. Default = 'additive'
 
             keep_input : bool
-                Retain the input information, by default it can be discarded since it will be
+                Set to retain the input information on forward, by default it can be discarded since it will be
+                reconstructed upon the backward pass.
+
+            keep_input_inverse : bool
+                Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
 
             implementation_fwd : int
@@ -51,6 +55,7 @@ class ReversibleBlock(nn.Module):
         """
         super(ReversibleBlock, self).__init__()
         self.keep_input = keep_input
+        self.keep_input_inverse = keep_input_inverse
         if coupling == 'additive':
             self.rev_block = AdditiveBlock(Fm, Gm,
                                            implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
@@ -76,7 +81,7 @@ class ReversibleBlock(nn.Module):
     def inverse(self, y):
         x = self.rev_block.inverse(y)
         # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
-        if not self.keep_input:
+        if not self.keep_input_inverse:
             if not pytorch_version_one_and_above:
                 # PyTorch 0.4 way to clear storage
                 y.data.set_()
