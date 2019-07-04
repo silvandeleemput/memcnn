@@ -95,22 +95,19 @@ def test_reversible_block_fwd_bwd(coupling, adapter):
 
                             # has input been retained/discarded after forward (and backward) passes?
 
-                            if keep_input:
-                                assert Xin.data.shape == Xshape
-                                assert Y.data.shape == Yrev.shape
-
-                            def test_memory_cleared(var, isclear):
+                            def test_memory_cleared(var, isclear, shape):
                                 if isclear:
                                     assert var.storage().size() == 0
                                 else:
                                     assert var.storage().size() > 0
+                                    assert var.shape == shape
 
                             if not bwd:
-                                test_memory_cleared(Xin, not keep_input)
-                                test_memory_cleared(Yrev, not keep_input_inverse)
+                                test_memory_cleared(Xin, not keep_input, Xshape)
+                                test_memory_cleared(Yrev, not keep_input_inverse, Xshape)
                             else:
-                                test_memory_cleared(Yrev, not keep_input)
-                                test_memory_cleared(Xin, not keep_input_inverse)
+                                test_memory_cleared(Yrev, not keep_input, Xshape)
+                                test_memory_cleared(Xin, not keep_input_inverse, Xshape)
 
                             optim.zero_grad()
                             loss.backward()
