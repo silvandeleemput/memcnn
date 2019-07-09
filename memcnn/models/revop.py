@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import torch
 import torch.nn as nn
 import warnings
@@ -14,42 +16,64 @@ class ReversibleBlock(nn.Module):
                  implementation_fwd=1, implementation_bwd=1, adapter=None):
         """The ReversibleBlock
 
-        Args:
-            Fm (torch.nn.Module) :
+        Note
+        ----
+        The `implementation_fwd` and `implementation_bwd` parameters can be set to one of the following implementations:
+
+        * -1 Naive implementation without reconstruction on the backward pass.
+        * 0  Memory efficient implementation, compute gradients directly.
+        * 1  Memory efficient implementation, similar to approach in Gomez et al. 2017.
+
+
+        Parameters
+        ----------
+            Fm : :obj:`torch.nn.Module`
                 A torch.nn.Module encapsulating an arbitrary function
 
-            Gm (torch.nn.Module, optional) :
+            Gm : :obj:`torch.nn.Module`, optional
                 A torch.nn.Module encapsulating an arbitrary function
                 (If not specified a deepcopy of Fm is used as a Module)
 
-            coupling (str, optional) :
+            coupling : :obj:`str`, optional
                 Type of coupling ['additive', 'affine']. Default = 'additive'
 
-            keep_input (bool, optional) :
+            keep_input : :obj:`bool`, optional
                 Set to retain the input information on forward, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
 
-            keep_input_inverse (bool, optional) :
+            keep_input_inverse : :obj:`bool`, optional
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
 
-            implementation_fwd (int, optional) :
+            implementation_fwd : :obj:`int`, optional
                 Switch between different Operation implementations for forward training (Default = 1).
-                    :-1: Naive implementation without reconstruction on the backward pass (keep_input should be True).
-                    :0: Memory efficient implementation, compute gradients directly on y.
-                    :1: Memory efficient implementation, similar to approach in Gomez et al. 2017.
+                If using the naive implementation (-1) then `keep_input` should be True.
 
-            implementation_bwd (int, optional) :
+            implementation_bwd : :obj:`int`, optional
                 Switch between different Operation implementations for backward training (Default = 1).
-                    :-1: Naive implementation without reconstruction on the backward pass (keep_input_inverse should be True).
-                    :0: Memory efficient implementation, compute gradients directly on x.
-                    :1: Memory efficient implementation, similar to approach in Gomez et al. 2017.
+                If using the naive implementation (-1) then `keep_input_inverse` should be True.
 
-            adapter (torch.nn.Module class, optional) :
-                Only relevant when using the 'affine' coupling
-                An optional wrapper class A for Fm and Gm which must output
-                s, t = A(x) with shape(s) = shape(t) = shape(x)
+            adapter : :obj:`class`, optional
+                Only relevant when using the 'affine' coupling.
+                Should be a class of type :obj:`torch.nn.Module` that serves as an
+                optional wrapper class A for Fm and Gm which must output
+                s, t = A(x) with shape(s) = shape(t) = shape(x).
                 s, t are respectively the scale and shift tensors for the affine coupling.
+
+        Attributes
+        ----------
+            keep_input : :obj:`bool`, optional
+                Set to retain the input information on forward, by default it can be discarded since it will be
+                reconstructed upon the backward pass.
+
+            keep_input_inverse : :obj:`bool`, optional
+                Set to retain the input information on inverse, by default it can be discarded since it will be
+                reconstructed upon the backward pass.
+
+        Raises
+        ------
+        NotImplementedError
+            If an unknown coupling or implementation is given.
 
         """
         super(ReversibleBlock, self).__init__()
@@ -67,11 +91,15 @@ class ReversibleBlock(nn.Module):
     def forward(self, x):
         """Forward operation :math:`R(x) = y`
 
-        Args:
-            x (torch.Tensor) : Input torch tensor.
+        Parameters
+        ----------
+            x : :obj:`torch.Tensor`
+                Input torch tensor.
 
-        Returns:
-            torch.Tensor : Output torch tensor y.
+        Returns
+        -------
+            :obj:`torch.Tensor`
+                Output torch tensor y.
 
         """
         y = self.rev_block(x)
@@ -89,11 +117,15 @@ class ReversibleBlock(nn.Module):
     def inverse(self, y):
         """Inverse operation :math:`R^{-1}(y) = x`
 
-        Args:
-            y (torch.Tensor) : Input torch tensor.
+        Parameters
+        ----------
+            y : :obj:`torch.Tensor`
+                Input torch tensor.
 
-        Returns:
-            torch.Tensor : Output torch tensor x.
+        Returns
+        -------
+            :obj:`torch.Tensor`
+                Output torch tensor x.
 
         """
         x = self.rev_block.inverse(y)
