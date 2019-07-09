@@ -34,6 +34,7 @@ setup(
     author='S.C. van de Leemput',
     author_email='silvandeleemput@gmail.com',
     packages=find_packages(),
+    include_package_data=True,
     scripts=[],
     url='http://pypi.python.org/pypi/memcnn/',
     license='LICENSE.txt',
