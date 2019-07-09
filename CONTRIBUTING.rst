@@ -103,15 +103,18 @@ Before you submit a pull request, check that it meets these guidelines:
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
 3. The pull request should work for Python 2.7, 3.4, 3.5 and 3.6, and for PyPy. Check
-   https://travis-ci.org/silvandeleemput/memcnn/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+   through tox that all the tests pass for all supported Python versions.
 
 Tips
 ----
 
 To run a subset of tests::
 
-$ py.test tests.test_memcnn
+$ pytest memcnn/memcnn/models/tests/test_revop.py
+
+To run a specific test::
+
+$ pytest memcnn/memcnn/models/tests/test_revop.py::test_reversible_block_fwd_bwd
 
 
 Deploying
@@ -123,6 +126,6 @@ Then run::
 
 $ bumpversion patch # possible: major / minor / patch
 $ git push
-$ git push --tags
+$ git push origin <tag_name>
 
-Travis will then deploy to PyPI if tests pass.
+CircleCI will then deploy to PyPI if tests pass.

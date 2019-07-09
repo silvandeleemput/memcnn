@@ -3,8 +3,8 @@ import torch
 import torch.nn
 import numpy as np
 import copy
-import memcnn.models.revop as revop
 from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid
+from memcnn import ReversibleBlock
 
 
 def set_seeds(seed):
@@ -17,15 +17,15 @@ def test_reversible_block_additive_notimplemented(coupling):
     fm = torch.nn.Conv2d(10, 10, (3, 3), padding=1)
     X = torch.zeros(1, 20, 10, 10)
     with pytest.raises(NotImplementedError):
-        f = revop.ReversibleBlock(fm, coupling=coupling, implementation_bwd=0, implementation_fwd=-2,
+        f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=0, implementation_fwd=-2,
                                   adapter=AffineAdapterNaive)
         f.forward(X)
     with pytest.raises(NotImplementedError):
-        f = revop.ReversibleBlock(fm, coupling=coupling, implementation_bwd=-2, implementation_fwd=0,
+        f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=-2, implementation_fwd=0,
                                   adapter=AffineAdapterNaive)
         f.inverse(X)
     with pytest.raises(NotImplementedError):
-        revop.ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
+        ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
                               adapter=AffineAdapterNaive)
 
 
@@ -73,7 +73,7 @@ def test_reversible_block_fwd_bwd(coupling, adapter):
                             Ytarget = torch.from_numpy(target_data.copy())
                             Xshape = X.shape
                             Gm2 = copy.deepcopy(Gm)
-                            rb = revop.ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
+                            rb = ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
                                                        implementation_bwd=implementation_bwd, adapter=adapter,
                                                        keep_input=keep_input, keep_input_inverse=keep_input_inverse)
                             rb.train()
@@ -153,7 +153,7 @@ def test_revblock_chained(coupling, adapter):
                      keep_input=False, adapter=None):
             super(SubModuleStack, self).__init__()
             self.stack = torch.nn.Sequential(
-                *[revop.ReversibleBlock(Gm, Gm, coupling=coupling, implementation_fwd=implementation_fwd,
+                *[ReversibleBlock(Gm, Gm, coupling=coupling, implementation_fwd=implementation_fwd,
                                         implementation_bwd=implementation_bwd, adapter=adapter,
                                         keep_input=keep_input) for _ in range(depth)]
             )
@@ -195,7 +195,7 @@ def test_revblock_simple_inverse(coupling):
                 X = torch.rand(2, 4, 5, 5)
 
                 # define an arbitrary reversible function
-                fn = revop.ReversibleBlock(torch.nn.Conv2d(2, 2, 3, padding=1), keep_input=False, coupling=coupling,
+                fn = ReversibleBlock(torch.nn.Conv2d(2, 2, 3, padding=1), keep_input=False, coupling=coupling,
                                            implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd,
                                            adapter=AffineAdapterNaive)
 
@@ -246,7 +246,7 @@ def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
 
         # define an arbitrary reversible function and define graph for model 1
         Xin = X.clone()
-        fn = revop.ReversibleBlock(c1_2, c2_2, keep_input=False, coupling=coupling, adapter=AffineAdapterNaive,
+        fn = ReversibleBlock(c1_2, c2_2, keep_input=False, coupling=coupling, adapter=AffineAdapterNaive,
                                    implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
         Y = fn.forward(Xin)
         loss2 = torch.mean(Y)

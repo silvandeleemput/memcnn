@@ -8,7 +8,7 @@ History
 * First release on PyPI.
 
 0.2.0 (2019-05-28)
---------
+------------------
 
 * Minor update with better coverage and affine coupling support
 

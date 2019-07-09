@@ -29,7 +29,6 @@ class AdditiveBlock(nn.Module):
             implementation_bwd : int
                 Switch between different Additive Operation implementations for inverse pass. Default = 1
 
-
         """
         super(AdditiveBlock, self).__init__()
         # mirror the passed module, without parameter sharing...
@@ -532,13 +531,13 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
             # calculate the final gradients for the weights and inputs
             dd = torch.autograd.grad(x1, (z1_stop,) + tuple(Fm.parameters()), x1_grad)
-            z1_grad = dd[0] + x2_grad # + or - ?
+            z1_grad = dd[0] + x2_grad
             FWgrads = dd[1:]
 
             dd = torch.autograd.grad(x2, (y2_stop, y1_stop) + tuple(Gm.parameters()), z1_grad, retain_graph=False)
 
             GWgrads = dd[2:]
-            y1_grad = dd[1] + x1_grad # + or - ?
+            y1_grad = dd[1] + x1_grad
             y2_grad = dd[0]
 
             grad_input = torch.cat([y1_grad, y2_grad], dim=1)

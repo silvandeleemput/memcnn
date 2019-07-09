@@ -2,6 +2,7 @@ import os
 import sys
 from distutils.core import setup
 from setuptools.command.install import install
+from setuptools import find_packages
 
 # circleci.py version
 VERSION = '0.2.1'
@@ -32,7 +33,7 @@ setup(
     version=VERSION,
     author='S.C. van de Leemput',
     author_email='silvandeleemput@gmail.com',
-    packages=['memcnn'],
+    packages=find_packages(),
     scripts=[],
     url='http://pypi.python.org/pypi/memcnn/',
     license='LICENSE.txt',
