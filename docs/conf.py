@@ -20,6 +20,12 @@
 #
 import os
 import sys
+import mock
+
+MOCK_MODULES = ['torch']
+for mod_name in MOCK_MODULES:
+   sys.modules[mod_name] = mock.Mock()
+
 sys.path.insert(0, os.path.abspath('..'))
 
 import memcnn
@@ -33,7 +39,7 @@ import memcnn.models.revop
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax', 'sphinx.ext.napoleon']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -47,10 +53,13 @@ source_suffix = '.rst'
 # The master toctree document.
 master_doc = 'index'
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
 autoclass_content = 'both'
+autodoc_mock_imports = ["torch"]
 
 mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
-
 mathjax_config = {
     'extensions': ['tex2jax.js'],
     'jax': ['input/TeX', 'output/HTML-CSS'],
@@ -61,7 +70,6 @@ project = u'MemCNN'
 copyright = u"2019, Sil van de Leemput"
 author = u"Sil van de Leemput"
 
-autodoc_mock_imports = ["torch"]
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout

@@ -3,3 +3,4 @@ sphinxcontrib-plantuml
 sphinxcontrib-ansibleautodoc
 sphinx_rtd_theme
 PyYAML
+mock
