@@ -61,6 +61,8 @@ project = u'MemCNN'
 copyright = u"2019, Sil van de Leemput"
 author = u"Sil van de Leemput"
 
+autodoc_mock_imports = ["torch"]
+
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
 # the built documents.
