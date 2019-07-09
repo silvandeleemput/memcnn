@@ -22,12 +22,14 @@ import os
 import sys
 import mock
 
-MOCK_MODULES = ['torch', 'torch.nn', 'numpy', 'tensorflow']
+MOCK_MODULES = ['torch', 'torch.nn', 'numpy', 'tensorflow', 'torchvision']
 for mod_name in MOCK_MODULES:
    sys.modules[mod_name] = mock.Mock()
 
 sys.path.insert(0, os.path.abspath('..'))
 
+import torch
+torch.__version__ = '1.1'
 import memcnn
 import memcnn.models.revop
 
