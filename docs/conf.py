@@ -22,7 +22,7 @@ import os
 import sys
 import mock
 
-MOCK_MODULES = ['torch']
+MOCK_MODULES = ['torch', 'torch.nn']
 for mod_name in MOCK_MODULES:
    sys.modules[mod_name] = mock.Mock()
 
@@ -59,7 +59,7 @@ napoleon_numpy_docstring = True
 autoclass_content = 'both'
 autodoc_mock_imports = ["torch"]
 
-mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+mathjax_path = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 mathjax_config = {
     'extensions': ['tex2jax.js'],
     'jax': ['input/TeX', 'output/HTML-CSS'],
@@ -178,6 +178,3 @@ texinfo_documents = [
      'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-
