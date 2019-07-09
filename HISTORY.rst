@@ -2,6 +2,12 @@
 History
 =======
 
+0.3.1 (2019-07-09)
+------------------
+
+* Added experiments.json and config.json.example data files to the distribution
+* Fixed documentation issues with mock modules
+
 0.3.0 (2019-07-09)
 ------------------
 

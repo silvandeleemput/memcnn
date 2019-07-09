@@ -3,18 +3,19 @@ MemCNN
 ======
 
 .. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg        
-        :alt: CircleCI
+        :alt: CircleCI - Status master branch
         :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
 
 .. image:: https://readthedocs.org/projects/memcnn/badge/?version=latest        
-        :alt: Documentation Status
+        :alt: Documentation - Status master branch
         :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://img.shields.io/codecov/c/gh/silvandeleemput/memcnn/master.svg   
-        :alt: Codecov branch
+        :alt: Codecov - Status master branch
         :target: https://codecov.io/gh/silvandeleemput/memcnn
 
 .. image:: https://img.shields.io/pypi/v/memcnn.svg
+        :alt: PyPI - Latest release
         :target: https://pypi.python.org/pypi/memcnn
 
 .. image:: https://img.shields.io/pypi/implementation/memcnn.svg        
@@ -22,12 +23,12 @@ MemCNN
         :target: https://pypi.python.org/pypi/memcnn
 
 .. image:: https://img.shields.io/pypi/pyversions/memcnn.svg        
-        :alt: PyPI - Python Version
+        :alt: PyPI - Python version
         :target: https://pypi.python.org/pypi/memcnn
 
 .. image:: https://img.shields.io/github/license/silvandeleemput/memcnn.svg        
-        :alt: GitHub
-        :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
+        :alt: GitHub - Repository license
+        :target: https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt
 
 A `PyTorch <http://pytorch.org/>`__ framework for developing memory
 efficient deep invertible networks
@@ -86,16 +87,25 @@ Example usage: ReversibleBlock
 Run PyTorch Experiments
 -----------------------
 
+If installed through pip:
+
 .. code:: bash
 
-    ./train.py [MODEL] [DATASET] --fresh
+    python -m memcnn.train [MODEL] [DATASET] [--fresh] [--no-cuda]
 
-Available values for ``DATASET`` are ``cifar10`` and ``cifar100``.
 
-Available values for ``MODEL`` are ``resnet32``, ``resnet110``,
-``resnet164``, ``revnet38``, ``revnet110``, ``revnet164``
+From cloned repository:
 
-If not available datasets are automatically downloaded.
+.. code:: bash
+
+    ./train.py [MODEL] [DATASET] [--fresh] [--no-cuda]
+
+* Available values for ``DATASET`` are ``cifar10`` and ``cifar100``.
+* Available values for ``MODEL`` are ``resnet32``, ``resnet110``, ``resnet164``, ``revnet38``, ``revnet110``, ``revnet164``
+* Use the ``--fresh`` flag to remove earlier experiment results.
+* Use the ``--no-cuda`` flag to train on the CPU rather than the GPU through CUDA.
+
+Datasets are automatically downloaded if they are not available.
 
 Results
 -------
