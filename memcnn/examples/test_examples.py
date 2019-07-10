@@ -1,4 +1,5 @@
 import torch
+import sys
 
 
 def test_minimal():
@@ -8,3 +9,12 @@ def test_minimal():
 
     # Output of the reversible block is unlikely to match the normal output of F
     assert not torch.allclose(minimal.Y2, minimal.Y)
+
+    # Cleanup minimal module and variables
+    del minimal.X
+    del minimal.Y
+    del minimal.F
+    del minimal.Y2
+    del minimal.X2
+    del minimal
+    del sys.modules['minimal']
