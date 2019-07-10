@@ -86,7 +86,7 @@ Example usage: ReversibleBlock
     model_invertible = memcnn.ReversibleBlock(F, coupling='additive', keep_input=True, keep_input_inverse=True)
     Y2 = model_invertible(X)
 
-    # The input can be approximated by applying the inverse method of the reversible block on Y2
+    # The input (X) can be approximated (X2) by applying the inverse method of the reversible block on Y2
     X2 = model_invertible.inverse(Y2)
 
 Run PyTorch Experiments
