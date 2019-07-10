@@ -5,7 +5,7 @@ from setuptools.command.install import install
 from setuptools import find_packages
 
 # circleci.py version
-VERSION = '0.3.1'
+VERSION = '0.3.2'
 
 with open('README.rst', 'r') as fh:
     long_description = fh.read().split('Results\n-------')[0]
