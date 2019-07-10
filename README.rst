@@ -34,8 +34,7 @@ MemCNN
         :alt: GitHub - Repository license
         :target: https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt
 
-A `PyTorch <http://pytorch.org/>`__ framework for developing memory
-efficient deep invertible networks
+A `PyTorch <http://pytorch.org/>`__ framework for developing memory-efficient invertible neural networks.
 
 * Free software: `MIT license <https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt>`__ (please cite our work if you use it)
 * Documentation: https://memcnn.readthedocs.io.

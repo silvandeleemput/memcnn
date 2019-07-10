@@ -188,6 +188,10 @@ Table 3 shows the average memory usage during model training using MemCNN. The r
 
 MemCNN has recently been used to create reversible GANs for memory-efficient image-to-image translation by [@Ouderaa_2019_CVPR]. Image-to-image translation considers the problem of mapping both $X \rightarrow Y$ and $Y \rightarrow X$ given two image domains $X$ and $Y$ using either paired or unpaired examples. In this work the CycleGAN [@zhu2017unpaired] model has been enlarged and extended with an invertible core using the reversible block, which they call RevGAN. Since the invertible core is weight tied, training the model for the mapping $X \rightarrow Y$ automatically trains the model for mapping $Y \rightarrow X$. They show similar or increased performance of RevGAN with respect to similar non-invertible models like the CycleGAN with less memory overhead during training. The RevGAN model has also been applied to chest CT images [@ouderaa:MIDLAbstract2019a].
 
+# Conclusion
+
+We have presented MemCNN, a novel PyTorch framework, for creating and applying reversible operations for neural networks. It shows similar accuracy on Cifar-10 and Cifar-100 datasets with the current state-of-the-art method for reversible operations in Tensorflow and provides overall faster training times. The main features of the framework are: smooth integration of reversible functions with other non-reversible functions by removing of the need for a custom back propagation and simple wrapping of arbitrary complex non-invertible nonlinear functions. The presented framework is intended to facilitate the study and application of invertible functions in the context of neural networks.
+
 # Acknowledgements
 
 This work was supported by research grants from the Netherlands Organization for Scientific Research (NWO), the Netherlands and Canon Medical Systems Corporation, Japan.
