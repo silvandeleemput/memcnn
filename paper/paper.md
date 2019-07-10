@@ -43,14 +43,14 @@ The different reversible architectures proposed in the literature [@Gomez17; @Ch
 # Methods
 
 ## The reversible block
-The core operator of MemCNN is the Reversible Block which is an operator which takes a function $R : X \to Y$, and an inverse function $R^{-1} : Y \rightarrow{X}$. Here, $x\in X$ and $y\in Y$ can be arbitrary tensors with the same size and number of dimension, i.e.: $\operatorname{shape}(x)=\operatorname{shape}(y)$. Additionally, it must be possible to partition the input $x=(x_1, x_2)$ and output tensors $y=(y_1, y_2)$ in half, where each partition has the same shape, i.e.: $\operatorname{shape}(x_1) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2)$. This formalization of the reversible block operation (equation 1), its inverse (equation 2), and its partition constraints (equation 3) provide a sufficiently general framework for implementing reversible operations. 
+The core operator of MemCNN is the reversible block which is an operator which takes a function $f$ and outputs a function $R : X \to Y$, and an inverse function $R^{-1} : Y \rightarrow{X}$ which resembles an invertible version of $f$. Here, $x\in X$ and $y\in Y$ can be arbitrary tensors with the same size and number of dimension, i.e.: $\operatorname{shape}(x)=\operatorname{shape}(y)$. Additionally, it must be possible to partition the input $x=(x_1, x_2)$ and output tensors $y=(y_1, y_2)$ in half, where each partition has the same shape, i.e.: $\operatorname{shape}(x_1) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2)$. Formally, the reversible block operation (1), its inverse (2), and its partition constraints (3) provide a sufficiently general framework for implementing reversible operations. 
 
-\label{eq:revblockforward}
-
-\begin{equation}  \quad R(x) = y = (y_1, y_2) \end{equation}
-\begin{equation} R^{-1}(y) = x = (x_1, x_2) \end{equation}
+\begin{equation} \quad R(x) = y \end{equation}
+\begin{equation} R^{-1}(y)  = x  \end{equation}
 with
 \begin{equation} \operatorname{shape}(x_i) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2) \end{equation}
+
+For example, if one wants to create a reversible block performing a convolution followed by a ReLu $f$, the input $x \in X$ is partitioned in $(x_1, x_2)$ of equal sizes to which this convolution block $f$ is applied twice (say $\mathcal{F}$ and $\mathcal{G}$). The Reversible Block takes these two operators ($\mathcal{F}$ and $\mathcal{G}$) and outputs a "resblock"-like version $R$ of the operator and an explicit inverse $R^{-1}$. Effectively the learnable function $f$ is replaced by a learnable approximation $R$ with an explicit inverse $R^{-1}$.
 
 
 ## Couplings
