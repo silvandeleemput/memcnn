@@ -2,6 +2,12 @@
 History
 =======
 
+0.3.3 (2019-07-10)
+------------------
+
+* Added docker build triggers to CI
+* Finalized JOSS paper.md
+
 0.3.2 (2019-07-10)
 ------------------
 
