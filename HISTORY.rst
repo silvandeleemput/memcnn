@@ -2,6 +2,15 @@
 History
 =======
 
+0.3.2 (2019-07-10)
+------------------
+
+* Added docker build shield
+* Fixed a bug with device agnostic tensor generation for loss.py
+* Code cleanup resnet.py
+* Added examples to distribution with pytests
+* Improved documentation
+
 0.3.1 (2019-07-09)
 ------------------
 
