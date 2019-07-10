@@ -98,7 +98,7 @@ jobs:
       - run:
           name: trigger docker hub latest tag build
           command: |
-            curl -H "Content-Type: application/json" --data '{"source_type": "Tag", "source_name": "$CIRCLE_TAG"}' -X POST https://cloud.docker.com/api/build/v1/source/6b9cd8c1-33cc-49fc-b313-7819ad9645e1/trigger/a08ae490-83cf-4d9a-9f4d-7cc38a281ce0/call/
+            curl -H "Content-Type: application/json" --data '{"source_type": "Tag", "source_name": "'"$CIRCLE_TAG"'"}' -X POST https://cloud.docker.com/api/build/v1/source/6b9cd8c1-33cc-49fc-b313-7819ad9645e1/trigger/a08ae490-83cf-4d9a-9f4d-7cc38a281ce0/call/
 
 workflows:
   version: 2
