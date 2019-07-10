@@ -53,13 +53,60 @@ Features
 Example usage: ReversibleBlock
 ------------------------------
 
-.. literalinclude:: ../memcnn/examples/minimal.py
-  :language: python
+.. code:: python
+
+    import torch
+    import torch.nn as nn
+    import memcnn
+
+
+    # define a new torch Module with a sequence of operations: Relu o BatchNorm2d o Conv2d
+    class ExampleOperation(nn.Module):
+        def __init__(self, channels):
+            super(ExampleOperation, self).__init__()
+            self.seq = nn.Sequential(
+                                        nn.Conv2d(in_channels=channels, out_channels=channels,
+                                                  kernel_size=(3, 3), padding=1),
+                                        nn.BatchNorm2d(num_features=channels),
+                                        nn.ReLU(inplace=True)
+                                    )
+
+        def forward(self, x):
+            return self.seq(x)
+
+    # generate some random input data (batch_size, num_channels, y_elements, x_elements)
+    X = torch.rand(2, 10, 8, 8)
+
+    # application of the operation(s) the normal way
+    model_normal = ExampleOperation(channels=10)
+    Y = model_normal(X)
+
+    # application of the operation(s) turned invertible using the reversible block
+    F = ExampleOperation(channels=10 // 2)
+    model_invertible = memcnn.ReversibleBlock(F, coupling='additive', keep_input=True, keep_input_inverse=True)
+    Y2 = model_invertible(X)
+
+    # The input can be approximated by applying the inverse method of the reversible block on Y2
+    X2 = model_invertible.inverse(Y2)
 
 Run PyTorch Experiments
 -----------------------
 
-.. include:: ./usage_experiments.rst
+After installing MemCNN run:
+
+.. code:: bash
+
+    python -m memcnn.train [MODEL] [DATASET] [--fresh] [--no-cuda]
+
+* Available values for ``DATASET`` are ``cifar10`` and ``cifar100``.
+* Available values for ``MODEL`` are ``resnet32``, ``resnet110``, ``resnet164``, ``revnet38``, ``revnet110``, ``revnet164``
+* Use the ``--fresh`` flag to remove earlier experiment results.
+* Use the ``--no-cuda`` flag to train on the CPU rather than the GPU through CUDA.
+
+Datasets are automatically downloaded if they are not available.
+
+When using Python 3.* replace the ``python`` directive with the appropriate Python 3 directive. For example when using the MemCNN docker image use ``python3.6``.
+
 
 Results
 -------
