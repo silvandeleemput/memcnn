@@ -6,6 +6,10 @@ MemCNN
         :alt: CircleCI - Status master branch
         :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
 
+.. image:: https://img.shields.io/docker/cloud/build/silvandeleemput/memcnn.svg
+        :alt: Docker - Status
+        :target: https://hub.docker.com/r/silvandeleemput/memcnn
+
 .. image:: https://readthedocs.org/projects/memcnn/badge/?version=latest        
         :alt: Documentation - Status master branch
         :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
@@ -44,68 +48,18 @@ Features
 * Simple switching between `additive` and `affine` invertible coupling schemes and different implementations.
 * Simple toggling of memory saving by setting the `keep_input` property of the `ReversibleBlock`.
 * Training and evaluation code for reproducing RevNet experiments using MemCNN.
-* CI tests for Python v2.7 and v3.6 and torch v0.4, v1.0, and v1.1 and good test coverage.
+* CI tests for Python v2.7 and v3.6 and torch v0.4, v1.0, and v1.1 with good code coverage.
 
 Example usage: ReversibleBlock
 ------------------------------
 
-.. code:: python
-
-    # some required imports
-    import torch
-    import torch.nn as nn
-    import numpy as np
-    import memcnn.models.revop
-
-
-    # define a new class of operation(s) PyTorch style
-    class ExampleOperation(nn.Module):
-        def __init__(self, channels):
-            super(ExampleOperation, self).__init__()
-            self.seq = nn.Sequential(
-                                        nn.Conv2d(in_channels=channels, out_channels=channels,
-                                                  kernel_size=(3, 3), padding=1),
-                                        nn.BatchNorm2d(num_features=channels),
-                                        nn.ReLU(inplace=True)
-                                    )
-
-        def forward(self, x):
-            return self.seq(x)
-
-
-    # generate some random input data (b, c, y, x)
-    data = np.random.random((2, 10, 8, 8)).astype(np.float32)
-    X = torch.from_numpy(data)
-
-    # application of the operation(s) the normal way
-    Y = ExampleOperation(channels=10)(X)
-
-    # application of the operation(s) using the reversible block
-    F, G = ExampleOperation(channels=10 // 2), ExampleOperation(channels=10 // 2)
-    Y = memcnn.models.revop.ReversibleBlock(F, G, coupling='additive')(X)
+.. literalinclude:: ../memcnn/examples/minimal.py
+  :language: python
 
 Run PyTorch Experiments
 -----------------------
 
-If installed through pip:
-
-.. code:: bash
-
-    python -m memcnn.train [MODEL] [DATASET] [--fresh] [--no-cuda]
-
-
-From cloned repository:
-
-.. code:: bash
-
-    ./train.py [MODEL] [DATASET] [--fresh] [--no-cuda]
-
-* Available values for ``DATASET`` are ``cifar10`` and ``cifar100``.
-* Available values for ``MODEL`` are ``resnet32``, ``resnet110``, ``resnet164``, ``revnet38``, ``revnet110``, ``revnet164``
-* Use the ``--fresh`` flag to remove earlier experiment results.
-* Use the ``--no-cuda`` flag to train on the CPU rather than the GPU through CUDA.
-
-Datasets are automatically downloaded if they are not available.
+.. include:: ./usage_experiments.rst
 
 Results
 -------
@@ -140,7 +94,7 @@ from the results in the ICLR paper. The Tensorflow results are still the
 same.
 
 Memory consumption of model training in PyTorch
------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ============= =============
  Model        GPU VRAM (MB)
@@ -181,4 +135,3 @@ If you use our code, please cite:
       year={2018},
       url={https://openreview.net/forum?id=r1KzqK1wz},
     }
-    

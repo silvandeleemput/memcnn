@@ -44,3 +44,9 @@ Example usage: ReversibleBlock
     # application of the operation(s) using the reversible block
     F, G = ExampleOperation(channels=10 // 2), ExampleOperation(channels=10 // 2)
     Y = memcnn.ReversibleBlock(F, G, coupling='additive')(X)
+
+
+Run PyTorch Experiments
+-----------------------
+
+.. include:: ./usage_experiments.rst

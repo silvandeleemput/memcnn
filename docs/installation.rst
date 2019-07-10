@@ -58,15 +58,38 @@ Once you have a copy of the source, you can install it with:
 .. _tarball: https://github.com/silvandeleemput/memcnn/tarball/master
 
 
-Using NVIDIA docker
--------------------
+Using docker
+------------
 
-Requirements
-^^^^^^^^^^^^
+MemCNN has several pre-build docker images that are hosted on dockerhub.
+You can directly pull these and to have a working environment for running the experiments.
+
+Run image from repository
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Run the latest docker build of MemCNN from the repository (automatically pulls the image):
+
+.. code:: bash
+
+    docker run --shm-size=4g --runtime=nvidia -it silvandeleemput/memcnn:latest
+
+For ``--runtime=nvidia`` to work `nvidia-docker <https://github.com/nvidia/nvidia-docker>`__ must be installed on your system.
+It can be omitted but this will drop GPU training support.
+
+This will open a preconfigured bash shell, which is correctly configured
+to run the experiments. The latest version has Ubuntu 18.04 and Python 3.6 installed.
+
+By default, the datasets and experimental results will be put inside the created
+docker container under: ``\home\user\data`` and
+``\home\user\experiments`` respectively.
+
+Build image from source
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Requirements:
 
 -  NVIDIA graphics card and the proper NVIDIA-drivers on your system
--  `nvidia-docker <https://github.com/nvidia/nvidia-docker>`__ installed
-   on your system
+
 
 The following bash commands will clone this repository and do a one-time
 build of the docker image with the right environment installed:
@@ -74,18 +97,7 @@ build of the docker image with the right environment installed:
 .. code:: bash
 
     git clone https://github.com/silvandeleemput/memcnn.git
-    docker build ./memcnn/docker --tag=memcnn-docker
+    docker build ./memcnn/docker --tag=silvandeleemput/memcnn:latest
 
-After the one-time install on your machine, the docker can be invoked
-by:
-
-.. code:: bash
-
-    docker run --shm-size=4g --runtime=nvidia -it memcnn-docker
-
-This will open a preconfigured bash shell, which is correctly configured
-to run the experiments from the next section.
-
-The datasets and experimental results will be put inside the created
-docker container under: ``\home\user\data`` and
-``\home\user\experiments`` respectively
+After the one-time install on your machine, the docker image can be invoked
+using the same commands as listed above.
