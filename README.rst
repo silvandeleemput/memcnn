@@ -14,6 +14,10 @@ MemCNN
         :alt: Documentation - Status master branch
         :target: https://memcnn.readthedocs.io/en/latest/?badge=latest
 
+.. image:: https://img.shields.io/codacy/grade/95de32e0d7c54d038611da47e9f0948b/master.svg
+        :alt: Codacy - Branch grade
+        :target: https://app.codacy.com/project/silvandeleemput/memcnn/dashboardgit
+
 .. image:: https://img.shields.io/codecov/c/gh/silvandeleemput/memcnn/master.svg   
         :alt: Codecov - Status master branch
         :target: https://codecov.io/gh/silvandeleemput/memcnn
