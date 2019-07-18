@@ -1,3 +1,0 @@
-[bandit]
-exclude: /.git,/.pytest_cache,/docs/_build,/docs/python.version_37,/memcnn/models/tests,/memcnn/trainers/tests,/memcnn/examples,/memcnn/utils/tests,/memcnn/experiment/tests,/memcnn/data/tests,/memcnn/config/tests
-skips: ['B101']
