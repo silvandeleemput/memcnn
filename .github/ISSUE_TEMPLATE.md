@@ -1,6 +1,6 @@
-* MemCNN version:
-* Python version:
-* Operating System:
+  * MemCNN version:
+  * Python version:
+  * Operating System:
 
 ### Description
 
