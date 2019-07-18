@@ -21,13 +21,13 @@ class ExperimentManager(object):
         for d in self.dirs:
             if not os.path.exists(d):
                 os.makedirs(d)
-        assert(self.all_dirs_exists())
+        assert(self.all_dirs_exists())  # nosec
 
     def delete_dirs(self):
         for d in self.dirs:
             if os.path.exists(d):
                 shutil.rmtree(d)
-        assert(not self.any_dir_exists())
+        assert(not self.any_dir_exists())  # nosec
 
     def any_dir_exists(self):
         return any([os.path.exists(d) for d in self.dirs])

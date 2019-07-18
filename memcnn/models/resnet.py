@@ -178,7 +178,7 @@ class ResNet(nn.Module):
         self.strides = strides
         self.init_max_pool = init_max_pool
         self.implementation = implementation
-        assert(len(self.channels_per_layer) == len(layers) + 1)
+        assert(len(self.channels_per_layer) == len(layers) + 1)  # nosec
         self.inplanes = channels_per_layer[0]  # 64 by default
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=init_kernel_size,

@@ -4,9 +4,9 @@ from torch.nn.modules.module import Module
 
 
 def _assert_no_grad(variable):
-    assert not variable.requires_grad, \
-        "nn criterions don't compute the gradient w.r.t. targets - please " \
-        "mark these variables as not requiring gradients"
+    msg = "nn criterions don't compute the gradient w.r.t. targets - please " \
+          "mark these variables as not requiring gradients"
+    assert not variable.requires_grad, msg  # nosec
 
 
 class CrossEntropyLossTF(Module):

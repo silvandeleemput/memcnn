@@ -177,11 +177,8 @@ class MemReporter(object):
         self.get_stats()
         for _, tensor_stats in self.device_tensor_stat.items():
             total_mem = 0
-            total_numel = 0
             for stat in tensor_stats:
-                name, _, numel, mem = stat
-                total_mem += mem
-                total_numel += numel
+                total_mem += stat[3]
 
             return total_mem
 
