@@ -23,7 +23,7 @@ def get_cifar_data_loaders(dataset, data_dir, max_epoch, batch_size, workers):
     mean_img = np.concatenate((tdata, vdata), axis=0).mean(axis=0)
 
     # define transforms
-    randomcroplambda = transforms.Lambda(lambda x: random_crop_transform(x))
+    randomcroplambda = transforms.Lambda(random_crop_transform)
     tonumpy = transforms.Lambda(lambda x: np.array(x.getdata()).reshape(x.size[1], x.size[0], 3))
     randomlrflip = transforms.Lambda(lambda x: np.copy(x[:, ::-1, :]) if np.random.random() >= 0.5 else x)
     meansubtraction = transforms.Lambda(lambda x: x.astype(np.float) - mean_img)

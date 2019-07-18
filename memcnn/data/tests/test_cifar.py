@@ -29,7 +29,7 @@ def test_cifar_data_loaders(max_epoch, batch_size):
                 self.train_data = (np.random.random_sample((20, 32, 32, 3)) * 255).astype(np.uint8)
             else:
                 self.test_data = (np.random.random_sample((10, 32, 32, 3)) * 255).astype(np.uint8)
-            self.transform = None
+            self.transform = lambda val: val
 
         def __getitem__(self, idx):
             img = self.train_data[idx] if self.train else self.test_data[idx]

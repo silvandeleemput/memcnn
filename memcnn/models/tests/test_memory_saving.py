@@ -29,7 +29,6 @@ class MemReporter(object):
         of Tensors
     """
     def __init__(self, model=None):
-        import torch
         self.tensor_name = defaultdict(list)
         self.device_mapping = defaultdict(list)
         self.device_tensor_stat = {}
@@ -62,7 +61,6 @@ class MemReporter(object):
             - the gradients(.grad) of Parameters is not collected, and
             I don't know why.
         """
-        import torch
         # FIXME: make the grad tensor collected by gc
         objects = gc.get_objects()
         tensors = [obj for obj in objects if isinstance(obj, torch.Tensor)]
@@ -74,7 +72,6 @@ class MemReporter(object):
         As a memory profiler, we cannot hold the reference to any tensors, which
         causes possibly inaccurate memory usage stats, so we delete the tensors after
         getting required stats"""
-        import torch
         visited_data = {}
         self.device_tensor_stat.clear()
 
@@ -138,7 +135,6 @@ class MemReporter(object):
         self.device_mapping.clear()
 
     def print_stats(self, verbose=False):
-        import torch
         # header
         show_reuse = verbose
         template_format = '{:<40s}{:>20s}{:>10s}'
@@ -179,11 +175,11 @@ class MemReporter(object):
     def collect_stats(self):
         self.collect_tensor()
         self.get_stats()
-        for device, tensor_stats in self.device_tensor_stat.items():
+        for _, tensor_stats in self.device_tensor_stat.items():
             total_mem = 0
             total_numel = 0
             for stat in tensor_stats:
-                name, size, numel, mem = stat
+                name, _, numel, mem = stat
                 total_mem += mem
                 total_numel += numel
 
