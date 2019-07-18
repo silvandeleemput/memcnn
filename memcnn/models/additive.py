@@ -112,7 +112,7 @@ class AdditiveBlockFunction(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert(x.shape[1] % 2 == 0)  # assert if proper split is possible
+        assert(x.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         ctx.Fm = Fm
@@ -154,7 +154,7 @@ class AdditiveBlockFunction(torch.autograd.Function):
         y1, y2 = y1.contiguous(), y2.contiguous()
 
         # partition output gradient also on channels
-        assert(grad_output.shape[1] % 2 == 0)
+        assert(grad_output.shape[1] % 2 == 0)  # nosec
 
         with torch.no_grad():
             # recompute x
@@ -221,7 +221,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert(y.shape[1] % 2 == 0)  # assert if proper split is possible
+        assert(y.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         cty.Fm = Fm
@@ -263,7 +263,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
         x1, x2 = x1.contiguous(), x2.contiguous()
 
         # partition output gradient also on channels
-        assert(grad_output.shape[1] % 2 == 0)
+        assert(grad_output.shape[1] % 2 == 0)  # nosec
 
         with torch.no_grad():
             # recompute y
@@ -330,7 +330,7 @@ class AdditiveBlockFunction2(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert(x.shape[1] % 2 == 0) # assert if possible
+        assert(x.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         ctx.Fm = Fm
@@ -374,7 +374,7 @@ class AdditiveBlockFunction2(torch.autograd.Function):
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # partition output gradient also on channels
-            assert(grad_output.shape[1] % 2 == 0)
+            assert(grad_output.shape[1] % 2 == 0)  # nosec
             y1_grad, y2_grad = torch.chunk(grad_output, 2, dim=1)
             y1_grad, y2_grad = y1_grad.contiguous(), y2_grad.contiguous()
 
@@ -453,7 +453,7 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert(y.shape[1] % 2 == 0) # assert if possible
+        assert(y.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         cty.Fm = Fm
@@ -497,7 +497,7 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # partition output gradient also on channels
-            assert(grad_output.shape[1] % 2 == 0)
+            assert(grad_output.shape[1] % 2 == 0)  # nosec
             x1_grad, x2_grad = torch.chunk(grad_output, 2, dim=1)
             x1_grad, x2_grad = x1_grad.contiguous(), x2_grad.contiguous()
 

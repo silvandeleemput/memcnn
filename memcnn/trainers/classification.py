@@ -21,7 +21,7 @@ def validate(model, ceriterion, val_loader, device):
 
     end = time.time()
     with torch.no_grad():
-        for ind, (x, label) in enumerate(val_loader):
+        for x, label in val_loader:
             x, label = x.to(device), label.to(device)
             vx, vl = x, label
 

@@ -35,7 +35,7 @@ class AffineAdapterSigmoid(nn.Module):
 
     def forward(self, x):
         h = self.f(x)
-        assert h.shape[1] % 2 == 0
+        assert h.shape[1] % 2 == 0  # nosec
         scale = torch.sigmoid(h[:, 1::2, :] + 2.0)
         shift = h[:, 0::2, :]
         return scale, shift
@@ -152,7 +152,7 @@ class AffineBlockFunction(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert (x.shape[1] % 2 == 0)  # assert if proper split is possible
+        assert (x.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         ctx.Fm = Fm
@@ -196,7 +196,7 @@ class AffineBlockFunction(torch.autograd.Function):
         y1, y2 = y1.contiguous(), y2.contiguous()
 
         # partition output gradient also on channels
-        assert (grad_output.shape[1] % 2 == 0)
+        assert (grad_output.shape[1] % 2 == 0)  # nosec
 
         with set_grad_enabled(False):
             # recompute x
@@ -273,7 +273,7 @@ class AffineBlockInverseFunction(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert (y.shape[1] % 2 == 0)  # assert if proper split is possible
+        assert (y.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         cty.Fm = Fm
@@ -319,7 +319,7 @@ class AffineBlockInverseFunction(torch.autograd.Function):
         x1, x2 = x1.contiguous(), x2.contiguous()
 
         # partition output gradient also on channels
-        assert (grad_output.shape[1] % 2 == 0)
+        assert (grad_output.shape[1] % 2 == 0)  # nosec
 
         with set_grad_enabled(False):
             # recompute y
@@ -396,7 +396,7 @@ class AffineBlockFunction2(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert (x.shape[1] % 2 == 0)  # assert if possible
+        assert (x.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         ctx.Fm = Fm
@@ -441,7 +441,7 @@ class AffineBlockFunction2(torch.autograd.Function):
             y1, y2 = y1.contiguous(), y2.contiguous()
 
             # partition output gradient also on channels
-            assert (grad_output.shape[1] % 2 == 0)
+            assert (grad_output.shape[1] % 2 == 0)  # nosec
             y1_grad, y2_grad = torch.chunk(grad_output, 2, dim=1)
             y1_grad, y2_grad = y1_grad.contiguous(), y2_grad.contiguous()
 
@@ -517,7 +517,7 @@ class AffineBlockInverseFunction2(torch.autograd.Function):
 
         """
         # check if possible to partition into two equally sized partitions
-        assert (y.shape[1] % 2 == 0)  # assert if possible
+        assert (y.shape[1] % 2 == 0)  # nosec
 
         # store partition size, Fm and Gm functions in context
         cty.Fm = Fm
@@ -562,7 +562,7 @@ class AffineBlockInverseFunction2(torch.autograd.Function):
             x1, x2 = x1.contiguous(), x2.contiguous()
 
             # partition output gradient also on channels
-            assert (grad_output.shape[1] % 2 == 0)
+            assert (grad_output.shape[1] % 2 == 0)  # nosec
             x1_grad, x2_grad = torch.chunk(grad_output, 2, dim=1)
             x1_grad, x2_grad = x1_grad.contiguous(), x2_grad.contiguous()
 
