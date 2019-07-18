@@ -10,8 +10,8 @@
 
 ### Check lists (check `x` in `[ ]` of list items)
 
-  - [ ] Test passed
-  - [ ] Coding style (indentation, etc)
+- [ ] Test passed
+- [ ] Coding style (indentation, etc)
 
 ### Additional Comments (if any)
 
