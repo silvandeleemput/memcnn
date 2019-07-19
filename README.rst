@@ -146,16 +146,19 @@ same.
 Memory consumption of model training in PyTorch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-============= =============
- Model        GPU VRAM (MB)
-============= =============
-resnet-32      766
-resnet-110     1357
-resnet-164     3083
-revnet-38      677
-revnet-110     706
-revnet-164     1226
-============= =============
+============= ============= ============  ================  =================
+ Model        Layers        Parameters    Parameters (MB)   Activations (MB)
+============= ============= ============  ================  =================
+ResNet        32            466906        1.9               238.6
+ResNet        110           1730714       6.8               810.7
+ResNet        164           1704154       6.8               2452.8
+RevNet        38            573994        2.3               85.6
+RevNet        110           1854890       7.3               85.7
+RevNet        164           1983786       7.9               432.7
+============= ============= ============  ================  =================
+
+The `ResNet` model is the conventional Risidual Network implementation in PyTorch, while
+the RevNet model uses the `Reversible Block` to achieve memory savings.
 
 Works using MemCNN
 ------------------

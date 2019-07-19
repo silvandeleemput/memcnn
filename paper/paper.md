@@ -155,27 +155,27 @@ revnet-164 & 94.56  & 13:09 & 76.39   & 13:12  & 94.90  & 7:21    & 76.90   & 7:
 
 To validate MemCNN, we reproduced the experiments from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning] using their Tensorflow [@TF2015] implementation on GitHub\footnote{\url{https://github.com/renmengye/revnet-public}}, and made a direct comparison with our PyTorch implementation on accuracy and train time. We have tried to keep all the experimental settings, like data loading, loss function, train procedure, and training parameters, as similar as possible. All experiments were performed on a single NVIDIA GeForce GTX 1080 with 8GB of RAM. The results are listed in Table 2. Model performance of our PyTorch implementation obtained similar accuracy to the TensorFlow implementation with less training time on Cifar-10 and Cifar-100. All models and experiments are included in MemCNN and can be rerun for reproducibility.
 
- **Table 3:** GPU VRAM memory usage using the MemCNN implementation during training for all models. All models were trained on a NVIDIA GeForce GTX 1080 with 8GB of RAM. Significant memory savings were observed when using reversible operations as the number of layers increased. 
+ **Table 3:** Model statistics for all PyTorch model implementations on memory usage (parameters and activations) in MB during training and the number of layers and parameters. The ResNet model was implemented using a conventional non-reversible implementation while the RevNet model uses MemCNN with memory saving reversible blocks. Significant memory savings for the activations were observed when using reversible operations (RevNet) as the number of layers increased. Model parameter memory usage stayed roughly the same between implementations. 
 
 \begin{center}
 
 \vspace{0.3cm}
 
-\begin{tabular}{cllr}
-\hline \textbf{Model} & \textbf{Layers} & \multicolumn{2}{c}{\textbf{GPU VRAM}} \\ \hline
-resnet & 32  & 766  & MB \\
-resnet & 110 & 1357 & MB \\
-resnet & 164 & 3083 & MB \\
-revnet & 38  & 677  & MB \\
-revnet & 110 & 706  & MB \\
-revnet & 164 & 1226 & MB \\ \hline
-    \end{tabular}
+\begin{tabular}{crrrr}
+\hline \textbf{Model} & \textbf{Layers} & \textbf{Parameters} & \textbf{Parameters (MB)} & \textbf{Activations (MB)} \\ \hline
+ResNet & 32 &  466906 &  1.9 & 238.6 \\
+ResNet & 110 & 1730714 & 6.8 & 810.7 \\
+ResNet & 164 & 1704154 & 6.8 & 2452.8 \\
+RevNet & 38 &  573994 &  2.3 & 85.6 \\
+RevNet & 110 & 1854890 & 7.3 & 85.7 \\
+RevNet & 164 & 1983786 & 7.9 & 432.7 \\ \hline
+\end{tabular}
 
 \vspace{0.6cm}
 
 \end{center}
 
-Table 3 shows the average memory usage during model training using MemCNN. The results show significant memory savings using the invertible operations as the number of layers increases for ResNet without the use of invertible operations.
+Table 3 shows memory usage statistics (parameters and activations) during training for all PyTorch models. Here, the ResNet model uses a conventional implementation and the RevNet model uses the reversible blocks from MemCNN. The results show that significant activation memory reduction was obtained using the reversible block implementation (RevNet) when the number of layers of the models increased. 
 
 # Works using MemCNN
 

@@ -67,6 +67,8 @@ def train(manager,
     if use_cuda:
         model_mem_allocation = torch.cuda.memory_allocated(device)
         logger.info('Model memory allocation: {}'.format(model_mem_allocation))
+    else:
+        model_mem_allocation = None
 
     writer = SummaryWriter(manager.log_dir)
     data_time = AverageMeter()
@@ -103,6 +105,7 @@ def train(manager,
         if use_cuda:
             activation_mem_allocation = torch.cuda.memory_allocated(device) - model_mem_allocation
             act_mem_activations.update(activation_mem_allocation, iteration)
+            # logger.info('Activations memory allocation: {}'.format(activation_mem_allocation))
 
         optimizer.zero_grad()
         loss.backward()
@@ -115,15 +118,18 @@ def train(manager,
         top1.update(prec1[0][0], x.size(0))
 
         if iteration % disp_iter == 0:
+            act = ''
+            if model_mem_allocation is not None:
+                act = 'ActMem {act.val:.3f} ({act.avg:.3f})'.format(act=act_mem_activations)
             logger.info('iteration: [{0}/{1}]\t'
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                         'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                         'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                         'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                        'ActMem {act.val:.3f} ({act.avg:.3f})\t'
+                        '{act}'
                         .format(iteration, max_iterations,
                                 batch_time=batch_time, data_time=data_time,
-                                loss=losses, top1=top1, act=act_mem_activations))
+                                loss=losses, top1=top1, act=act))
 
         if iteration % disp_iter == 0:
             writer.add_scalar('train_loss', loss.item(), iteration)
