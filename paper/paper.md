@@ -131,44 +131,62 @@ The reversible block model has an advantageous memory footprint when chained in 
 
 # Experiments and results
 
- **Table 2:** Accuracy (acc.) and training time (time, in hours:minutes) comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning].
+ **Table 2a:** Accuracy comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning]. Accuracies were approximately similar between implementations.
  
 \begin{center}
  
 \vspace{0.3cm}
  
-\begin{tabular}{lcccccccc}
-\hline         & \multicolumn{4}{c}{\textbf{Tensorflow}} & \multicolumn{4}{c}{\textbf{PyTorch}} \\
-           & \multicolumn{2}{c}{\textbf{Cifar-10}} & \multicolumn{2}{c}{\textbf{Cifar-100}} & \multicolumn{2}{c}{\textbf{Cifar-10}} & \multicolumn{2}{c}{\textbf{Cifar-100}} \\
-\textbf{Model} & \textbf{acc.} & \textbf{time} & \textbf{acc.} & \textbf{time} & \textbf{acc.} & \textbf{time} & \textbf{acc.} & \textbf{time} \\\hline
-resnet-32  & 92.74  & \,\,2:04  & 69.10   & \,\,1:58   & 92.86  & 1:51    & 69.81   & 1:51    \\
-resnet-110 & 93.99  & \,\,4:11 & 73.30   & \,\,6:44   & 93.55  & 2:51    & 72.40   & 2:39    \\
-resnet-164 & 94.57  & 11:05 & 76.79   & 10:59  & 94.80  & 4:59    & 76.47   & 3:45    \\
-revnet-38  & 93.14  & \,\,2:17 & 71.17   & \,\,2:20   & 92.80  & 2:09    & 69.90   & 2:16    \\
-revnet-110 & 94.02  & \,\,6:59 & 74.00   & \,\,7:03    & 94.10  & 3:42    & 73.30   & 3:50    \\
-revnet-164 & 94.56  & 13:09 & 76.39   & 13:12  & 94.90  & 7:21    & 76.90   & 7:17    \\ \hline
+\begin{tabular}{lcccc}
+\hline         & \multicolumn{2}{c}{\textbf{Cifar-10}} & \multicolumn{2}{c}{\textbf{Cifar-100}} \\
+\textbf{Model} & \textbf{Tensorflow} & \textbf{PyTorch} & \textbf{Tensorflow} & \textbf{PyTorch} \\ \hline
+ResNet-32  & 92.74  & 92.86  & 69.10  & 69.81 \\
+ResNet-110 & 93.99  & 93.55  & 73.30  & 72.40 \\
+ResNet-164 & 94.57  & 94.80  & 76.79  & 76.47 \\
+RevNet-38  & 93.14  & 92.80  & 71.17  & 69.90 \\
+RevNet-110 & 94.02  & 94.10  & 74.00  & 73.30 \\
+RevNet-164 & 94.56  & 94.90  & 76.39  & 76.90 \\ \hline
+\end{tabular}
+
+\vspace{0.3cm}
+
+\end{center}
+
+**Table 2b:** Training time (in hours:minutes) comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning]. Training times were significantly less for the PyTorch implementation than for the Tensorflow implementation.
+
+\begin{center}
+
+\vspace{0.3cm}
+
+\begin{tabular}{lcccc}
+\hline         & \multicolumn{2}{c}{\textbf{Cifar-10}} & \multicolumn{2}{c}{\textbf{Cifar-100}} \\
+\textbf{Model} & \textbf{Tensorflow} & \textbf{PyTorch} & \textbf{Tensorflow} & \textbf{PyTorch} \\ \hline
+ResNet-32  & \;\,\,2:04 & 1:51  & \;\,\,1:58  & 1:51 \\
+ResNet-110 & \;\,\,4:11 & 2:51  & \;\,\,6:44  & 2:39 \\
+ResNet-164 & 11:05    & 4:59  & 10:59     & 3:45 \\
+RevNet-38  & \;\,\,2:17 & 2:09  & \;\,\,2:20  & 2:16 \\
+RevNet-110 & \;\,\,6:59 & 3:42  & \;\,\,7:03  & 3:50 \\
+RevNet-164 & 13:09    & 7:21  & 13:12     & 7:17 \\ \hline
 \end{tabular}
 
 \vspace{0.6cm}
 
 \end{center}
 
-To validate MemCNN, we reproduced the experiments from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning] using their Tensorflow [@TF2015] implementation on GitHub\footnote{\url{https://github.com/renmengye/revnet-public}}, and made a direct comparison with our PyTorch implementation on accuracy and train time. We have tried to keep all the experimental settings, like data loading, loss function, train procedure, and training parameters, as similar as possible. All experiments were performed on a single NVIDIA GeForce GTX 1080 with 8GB of RAM. The results are listed in Table 2. Model performance of our PyTorch implementation obtained similar accuracy to the TensorFlow implementation with less training time on Cifar-10 and Cifar-100. All models and experiments are included in MemCNN and can be rerun for reproducibility.
+To validate MemCNN, we reproduced the experiments from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning] using their Tensorflow [@TF2015] implementation on GitHub\footnote{\url{https://github.com/renmengye/revnet-public}}, and made a direct comparison with our PyTorch implementation on accuracy and train time. We have tried to keep all the experimental settings, like data loading, loss function, train procedure, and training parameters, as similar as possible. All experiments were performed on a single NVIDIA GeForce GTX 1080 with 8GB of RAM. The accuracies and training time results are listed in respectively Table 2a and Table 2b. Model performance of our PyTorch implementation obtained similar accuracy to the TensorFlow implementation with less training time on Cifar-10 and Cifar-100. All models and experiments are included in MemCNN and can be rerun for reproducibility.
 
- **Table 3:** Model statistics for all PyTorch model implementations on memory usage (parameters and activations) in MB during training and the number of layers and parameters. The ResNet model was implemented using a conventional non-reversible implementation while the RevNet model uses MemCNN with memory saving reversible blocks. Significant memory savings for the activations were observed when using reversible operations (RevNet) as the number of layers increased. Model parameter memory usage stayed roughly the same between implementations. 
+ **Table 3:** Model statistics for all PyTorch model implementations on memory usage (parameters and activations) in MB during training and the number of layers and parameters. The ResNet model was implemented using a conventional non-reversible implementation while the RevNet model uses MemCNN with memory saving reversible blocks. To facilitate comparison, each row lists the statistics of one ResNet and one RevNet model which have a comparable number of layers and number of parameters. Significant memory savings for the activations were observed when using reversible operations (RevNet) as the number of layers increased. Model parameter memory usage stayed roughly the same between implementations. 
 
 \begin{center}
 
 \vspace{0.3cm}
 
-\begin{tabular}{crrrr}
-\hline \textbf{Model} & \textbf{Layers} & \textbf{Parameters} & \textbf{Parameters (MB)} & \textbf{Activations (MB)} \\ \hline
-ResNet & 32 &  466906 &  1.9 & 238.6 \\
-ResNet & 110 & 1730714 & 6.8 & 810.7 \\
-ResNet & 164 & 1704154 & 6.8 & 2452.8 \\
-RevNet & 38 &  573994 &  2.3 & 85.6 \\
-RevNet & 110 & 1854890 & 7.3 & 85.7 \\
-RevNet & 164 & 1983786 & 7.9 & 432.7 \\ \hline
+\begin{tabular}{rr rr rr rr}
+\hline \multicolumn{2}{c}{\textbf{Layers}} & \multicolumn{2}{c}{\textbf{Parameters}} & \multicolumn{2}{c}{\textbf{Parameters (MB)}} & \multicolumn{2}{c}{\textbf{Activations (MB)}} \\
+\multicolumn{2}{c}{\textbf{ResNet  RevNet}} & \multicolumn{2}{c}{\textbf{ResNet  RevNet}} & \multicolumn{2}{c}{\textbf{ResNet  RevNet}} & \multicolumn{2}{c}{\textbf{ResNet  RevNet}} \\ \hline
+\quad  32 &  38 \quad \quad &  466906 &  573994 & \quad \enspace 1.9 & 2.3 \quad \enspace & \quad 238.6  & 85.6  \enspace \enspace \\
+\quad 110 & 110 \quad \quad & 1730714 & 1854890 & \quad \enspace 6.8 & 7.3 \quad \enspace & \quad 810.7  & 85.7  \enspace \enspace \\
+\quad 164 & 164 \quad \quad & 1704154 & 1983786 & \quad \enspace 6.8 & 7.9 \quad \enspace & \quad 2452.8 & 432.7 \enspace \enspace \\ \hline
 \end{tabular}
 
 \vspace{0.6cm}
