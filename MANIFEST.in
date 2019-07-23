@@ -3,6 +3,9 @@ include CONTRIBUTING.rst
 include HISTORY.rst
 include LICENSE.txt
 include README.rst
+include requirements.txt
+include devRequirements.txt
+include docsRequirements.txt
 
 recursive-include tests *
 recursive-exclude * __pycache__
