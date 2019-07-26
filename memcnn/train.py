@@ -94,5 +94,17 @@ def main(data_dir, results_dir):
 
 
 if __name__ == '__main__':  # pragma: no cover
-    main(data_dir=Config()['data_dir'],
-         results_dir=Config()['results_dir'])
+    config_fname = Config.get_filename()
+    if not os.path.exists(config_fname) or not 'data_dir' in Config() or not 'results_dir' in Config():
+        print('The configuration file was not set correctly.\n')
+        print('Please create a configuration file (json) at:\n {}\n'.format(config_fname))
+        print('The configuration file should be formatted as follows:\n\n'
+              '{\n'
+              '    "data_dir": "/home/user/data",\n'
+              '    "results_dir": "/home/user/experiments"\n'
+              '}\n')
+        print('data_dir    : location for storing the input training datasets')
+        print('results_dir : location for storing the experiment files during training')
+    else:
+        main(data_dir=Config()['data_dir'],
+             results_dir=Config()['results_dir'])

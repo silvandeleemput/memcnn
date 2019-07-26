@@ -101,3 +101,33 @@ build of the docker image with the right environment installed:
 
 After the one-time install on your machine, the docker image can be invoked
 using the same commands as listed above.
+
+Experiment configuration file
+-----------------------------
+
+To run the experiments, MemCNN requires setting up a configuration file containing locations to put the data files. This step should be only necessary when MemCNN
+was installed using ``pip`` or when it was installed from sources.
+
+
+The configuration file ``config.json`` goes in the ``/memcnn/config/`` directory of the library and should be formatted as follows:
+
+.. code:: json
+
+    {
+        "data_dir": "/home/user/data",
+        "results_dir": "/home/user/experiments"
+    }
+
+* data_dir    : location for storing the input training datasets
+* results_dir : location for storing the experiment files during training
+
+Change the data paths to your liking.
+
+If you are unsure where MemCNN and/or the configuration file is located on your machine run:
+
+.. code:: bash
+
+    python -m memcnn.train
+
+If the configuration file is not setup correctly, this command should give the user the correct path to the configuration file.
+Next, create/edit the file at the given location.
