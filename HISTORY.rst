@@ -2,6 +2,15 @@
 History
 =======
 
+0.3.4 (2019-07-26)
+------------------
+
+* Performed changes recommended by JOSS reviewers:
+* Added requirements.txt to manifest.in
+* Added codacy code quality integration
+* Improved documentation
+* Setup proper github contribution templates
+
 0.3.3 (2019-07-10)
 ------------------
 
