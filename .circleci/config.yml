@@ -30,6 +30,7 @@ jobs:
       - *run_task_install_tox_dependencies
       - run:
           name: execute pytests << parameters.tests >>
+          no_output_timeout: 30m
           command: |
             mkdir test-reports
             tox -e << parameters.tests >>
@@ -74,6 +75,7 @@ jobs:
             cat ~/memcnn/meta.yaml
       - run:
           name: build binary artifacts for python versions << parameters.versions >>
+          no_output_timeout: 30m
           command: |
             cd ~/memcnn
             PYTHON_VERSIONS=( << parameters.versions >> )

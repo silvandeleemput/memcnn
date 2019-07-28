@@ -5,8 +5,16 @@ History
 1.0.0 (2019-07-28)
 ------------------
 
+* Major release for completing the JOSS review:
+* Anaconda cloud and codacy code quality CI
+* Updated/improved documentation
+
+0.3.5 (2019-07-28)
+------------------
+
 * Added CI for anaconda cloud
 * Documented conda installation steps
+* Minor test release for testing CI build
 
 0.3.4 (2019-07-26)
 ------------------
