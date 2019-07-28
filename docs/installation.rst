@@ -15,7 +15,7 @@ Requirements
 Stable release
 --------------
 
-These are the preferred methods to install MemCNN, as it will always install the most recent stable release.
+These are the preferred methods to install MemCNN, as they will always install the most recent stable release.
 
 PyPi
 ^^^^
@@ -122,8 +122,8 @@ using the same commands as listed above.
 Experiment configuration file
 -----------------------------
 
-To run the experiments, MemCNN requires setting up a configuration file containing locations to put the data files. This step should be only necessary when MemCNN
-was installed using ``pip`` or when it was installed from sources.
+To run the experiments, MemCNN requires setting up a configuration file containing locations to put the data files.
+This step is not necessary for the docker builds.
 
 
 The configuration file ``config.json`` goes in the ``/memcnn/config/`` directory of the library and should be formatted as follows:
