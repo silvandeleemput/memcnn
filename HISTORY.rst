@@ -2,6 +2,12 @@
 History
 =======
 
+1.0.0 (2019-07-28)
+------------------
+
+* Added CI for anaconda cloud
+* Documented conda installation steps
+
 0.3.4 (2019-07-26)
 ------------------
 

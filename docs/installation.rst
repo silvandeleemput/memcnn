@@ -15,13 +15,16 @@ Requirements
 Stable release
 --------------
 
-To install MemCNN, run this command in your terminal:
+These are the preferred methods to install MemCNN, as it will always install the most recent stable release.
+
+PyPi
+^^^^
+
+To install MemCNN using the Python package manager, run this command in your terminal:
 
 .. code-block:: console
 
     $ pip install memcnn
-
-This is the preferred method to install MemCNN, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -29,6 +32,20 @@ you through the process.
 .. _pip: https://pip.pypa.io
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
+Anaconda
+^^^^^^^^
+
+To install MemCNN using Anaconda, run this command in your terminal:
+
+.. code-block:: console
+
+    $ conda install -c silvandeleemput -c pytorch -c simpleitk -c conda-forge memcnn
+
+If you don't have `conda`_ installed, this `Anaconda installation guide`_ can guide
+you through the process.
+
+.. _conda: https://www.anaconda.com/
+.. _Anaconda installation guide: https://docs.conda.io/projects/conda/en/latest/user-guide/install/
 
 From sources
 ------------
@@ -69,9 +86,9 @@ Run image from repository
 
 Run the latest docker build of MemCNN from the repository (automatically pulls the image):
 
-.. code:: bash
+.. code-block:: console
 
-    docker run --shm-size=4g --runtime=nvidia -it silvandeleemput/memcnn:latest
+    $ docker run --shm-size=4g --runtime=nvidia -it silvandeleemput/memcnn:latest
 
 For ``--runtime=nvidia`` to work `nvidia-docker <https://github.com/nvidia/nvidia-docker>`__ must be installed on your system.
 It can be omitted but this will drop GPU training support.
@@ -94,10 +111,10 @@ Requirements:
 The following bash commands will clone this repository and do a one-time
 build of the docker image with the right environment installed:
 
-.. code:: bash
+.. code-block:: console
 
-    git clone https://github.com/silvandeleemput/memcnn.git
-    docker build ./memcnn/docker --tag=silvandeleemput/memcnn:latest
+    $ git clone https://github.com/silvandeleemput/memcnn.git
+    $ docker build ./memcnn/docker --tag=silvandeleemput/memcnn:latest
 
 After the one-time install on your machine, the docker image can be invoked
 using the same commands as listed above.
@@ -125,9 +142,9 @@ Change the data paths to your liking.
 
 If you are unsure where MemCNN and/or the configuration file is located on your machine run:
 
-.. code:: bash
+.. code-block:: console
 
-    python -m memcnn.train
+    $ python -m memcnn.train
 
 If the configuration file is not setup correctly, this command should give the user the correct path to the configuration file.
 Next, create/edit the file at the given location.

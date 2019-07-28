@@ -34,6 +34,10 @@ MemCNN
         :alt: PyPI - Python version
         :target: https://pypi.python.org/pypi/memcnn
 
+.. image:: https://img.shields.io/conda/vn/silvandeleemput/memcnn?label=anaconda
+        :alt: Conda - Latest release
+        :target: https://anaconda.org/silvandeleemput/memcnn
+
 .. image:: https://img.shields.io/github/license/silvandeleemput/memcnn.svg        
         :alt: GitHub - Repository license
         :target: https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt

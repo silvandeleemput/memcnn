@@ -51,6 +51,46 @@ jobs:
           name: build the sphinx documentation
           command: |
             tox -e docs
+  conda_deploy:
+    parameters:
+      versions:
+        type: string
+        default: "2.7 3.6 3.7"
+    docker:
+      - image: continuumio/miniconda3
+    steps:
+      - checkout
+      - run:
+          name: install conda dependencies
+          command: |
+            conda install conda-build anaconda-client conda-verify -y
+      - run:
+          name: generate skeleton file from PyPI and complete recipe
+          command: |
+            cd ~
+            conda skeleton pypi memcnn
+            cd memcnn
+            python -c "f = open('meta.yaml', 'r'); data = f.read(); f.close(); data=data.replace(' torch ', ' pytorch ').replace('your-github-id-here', 'silvandeleemput').replace('pillow\n    - python', 'pillow\n    - pip\n    - python').replace(' pip', ' pip >=18.0'); f = open('meta.yaml', 'w'); f.write(data); f.close();"
+            cat ~/memcnn/meta.yaml
+      - run:
+          name: build binary artifacts for python versions << parameters.versions >>
+          command: |
+            cd ~/memcnn
+            PYTHON_VERSIONS=( << parameters.versions >> )
+            for i in "${PYTHON_VERSIONS[@]}"
+            do
+                echo $i
+                conda-build -c conda-forge -c simpleitk -c pytorch --numpy 1.15.1 --python $i .
+            done
+      - run:
+          name: upload binary artifacts for all platforms to anaconda cloud
+          command: |
+            anaconda login --user=silvandeleemput --password=$CONDA_PASSWORD
+            find /opt/conda/conda-bld/ -name *.tar.bz2 | while read file
+            do
+                echo $file
+                anaconda upload $file --skip-existing --all
+            done
   deploy:
     docker:
       - image: circleci/python:3.6
@@ -94,11 +134,11 @@ jobs:
       - run:
           name: trigger docker hub master branch build
           command: |
-            curl -H "Content-Type: application/json" --data '{"source_type": "Branch", "source_name": "master"}' -X POST https://cloud.docker.com/api/build/v1/source/6b9cd8c1-33cc-49fc-b313-7819ad9645e1/trigger/a08ae490-83cf-4d9a-9f4d-7cc38a281ce0/call/
+            curl -H "Content-Type: application/json" --data '{"source_type": "Branch", "source_name": "master"}' -X POST $DOCKER_TRIGGER_URL
       - run:
           name: trigger docker hub latest tag build
           command: |
-            curl -H "Content-Type: application/json" --data '{"source_type": "Tag", "source_name": "'"$CIRCLE_TAG"'"}' -X POST https://cloud.docker.com/api/build/v1/source/6b9cd8c1-33cc-49fc-b313-7819ad9645e1/trigger/a08ae490-83cf-4d9a-9f4d-7cc38a281ce0/call/
+            curl -H "Content-Type: application/json" --data '{"source_type": "Tag", "source_name": "'"$CIRCLE_TAG"'"}' -X POST $DOCKER_TRIGGER_URL
 
 workflows:
   version: 2
@@ -148,6 +188,36 @@ workflows:
             - testing_py36_torch04
             - testing_py36_torch10
             - testing_py36_torch11
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - conda_deploy:
+          name: conda_deploy_py27
+          versions: "2.7"
+          requires:
+            - deploy
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - conda_deploy:
+          name: conda_deploy_py36
+          requires:
+            - deploy
+          versions: "3.6"
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - conda_deploy:
+          name: conda_deploy_py37
+          requires:
+            - deploy
+          versions: "3.7"
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/
