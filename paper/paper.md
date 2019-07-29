@@ -30,9 +30,9 @@ Reversible operations have recently been successfully applied to classification 
 
 # Background
 
-Reversible functions, which allow exact retrieval of its input from its output, can reduce memory overhead when used within the context of training neural networks using backpropagation. That is since only the output requires to be stored, intermediate feature maps can be freed on the forward pass and recomputed from the output on the backward pass when required. Recently, reversible functions have been used with some success to extend the well established residual network (ResNet) for image classification from [@He2015] to more memory efficient invertible convolutional neural networks [@Gomez17; @Chang17; @jaco18] showing competitive performance on datasets like Cifar-10, Cifar-100 [@krizhevsky2009learning] and ImageNet [@imagenet_cvpr09]. However, practical applicability and extendibility of reversible functions for the reduction of memory overhead have been limited, since current implementations require customized backpropagation, which does not work conveniently with modern deep learning frameworks and requires substantial manual design. 
+Reversible functions, which allow exact retrieval of its input from its output, can reduce memory overhead when used within the context of training neural networks using backpropagation. That is since only the output requires to be stored, intermediate feature maps can be freed on the forward pass and recomputed from the output on the backward pass when required. Recently, reversible functions have been used with some success to extend the well established residual network (ResNet) for image classification from @He2015 to more memory efficient invertible convolutional neural networks [@Gomez17; @Chang17; @jaco18] showing competitive performance on datasets like Cifar-10, Cifar-100 [@krizhevsky2009learning] and ImageNet [@imagenet_cvpr09]. However, practical applicability and extendibility of reversible functions for the reduction of memory overhead have been limited, since current implementations require customized backpropagation, which does not work conveniently with modern deep learning frameworks and requires substantial manual design. 
 
-The reversible residual network (RevNet) of [@Gomez17] is a variant on ResNet, which hooks into its sequential structure of residual blocks and replaces them with reversible blocks, that creates an explicit inverse for the residual blocks based on the equations from [@Dinh14] on nonlinear independent components estimation. The reversible block takes arbitrary nonlinear functions $\mathcal{F}$ and $\mathcal{G}$ and renders them invertible. Their experiments show that RevNet scores similar classification performance on Cifar-10, Cifar-100, and ImageNet, with less memory overhead. 
+The reversible residual network (RevNet) of @Gomez17 is a variant on ResNet, which hooks into its sequential structure of residual blocks and replaces them with reversible blocks, that creates an explicit inverse for the residual blocks based on the equations from @Dinh14 on nonlinear independent components estimation. The reversible block takes arbitrary nonlinear functions $\mathcal{F}$ and $\mathcal{G}$ and renders them invertible. Their experiments show that RevNet scores similar classification performance on Cifar-10, Cifar-100, and ImageNet, with less memory overhead. 
 
 Reversible architectures like RevNet have subsequently been studied in the framework of ordinary differential equations (ODE) [@Chang17]. Three reversible neural networks based on Hamiltonian systems are proposed, which are similar to the RevNet, but have a specific choice for the nonlinear functions $\mathcal{F}$ and $\mathcal{G}$ which are shown stable during training within the ODE framework on Cifar-10 and Cifar-100.
 
@@ -58,7 +58,7 @@ Using the above definitions we provide two different implementations for the rev
 
 ### Additive coupling
 
-Equation 4 represents the additive coupling, which follows the equations of [@Dinh14] and [@Gomez17]. These support a reversible implementation through arbitrary (nonlinear) functions $\mathcal{F}$ and $\mathcal{G}$. These functions can be convolutions, ReLus, etc., as long as they have matching input and output shapes. The additive coupling is obtained by first computing $y_1$ from input partitions $x_1, x_2$ and function $\mathcal{F}$ and subsequently $y_2$ is computed from partitions $y_1, x_2$ and function $\mathcal{G}$. Next, (4) can be rewritten to obtain an exact inverse function as shown in (5). Figure 1 shows a graphical representation of the additive coupling and its inverse.
+Equation 4 represents the additive coupling, which follows the equations of @Dinh14 and @Gomez17. These support a reversible implementation through arbitrary (nonlinear) functions $\mathcal{F}$ and $\mathcal{G}$. These functions can be convolutions, ReLus, etc., as long as they have matching input and output shapes. The additive coupling is obtained by first computing $y_1$ from input partitions $x_1, x_2$ and function $\mathcal{F}$ and subsequently $y_2$ is computed from partitions $y_1, x_2$ and function $\mathcal{G}$. Next, (4) can be rewritten to obtain an exact inverse function as shown in (5). Figure 1 shows a graphical representation of the additive coupling and its inverse.
 
 ![Graphical representation of additive coupling. The left graph shows the forward computations and the right graph shows its inverse. First, input $x_1$ and $\mathcal{F}(x_2)$ are added to form $y_1$, next $x_2$ and $\mathcal{G}(y_1)$ are added to form $y_2$. Going backwards, first, $\mathcal{G}(y_1)$ is subtracted from $y_2$ to obtain $x_2$; subsequently, $\mathcal{F}(x_2)$ is subtracted from $y_1$ to obtain $x_1$. Here, $+$ and $-$ stand for respectively element-wise summation and element-wise subtraction.](additive_005.pdf)
 
@@ -77,7 +77,7 @@ x_1 &= y_1 - \mathcal{F}(x_2)
 
 ### Affine coupling
 
-Equation (6) gives the affine coupling, introduced by [@dinh2016density] and later used by [@kingma2018glow], which is more expressive than the additive coupling. The affine coupling, similar to the additive coupling, supports a reversible implementations through arbitrary (nonlinear) functions $\mathcal{F}$ and $\mathcal{G}$. It also first computes $y_1$ from input partitions $x_1, x_2$ and function $\mathcal{F}$ and subsequently it computes $y_2$ from partitions $y_1, x_2$ and function $\mathcal{G}$. The difference with the additive coupling is that now the functions $\mathcal{F}=(s,t)$ and $\mathcal{G}=(s',t')$ each produce two equally sized partitions for scaling and translation, so $\operatorname{shape}(x_1) = \operatorname{shape}(s) = \operatorname{shape}(t) = \operatorname{shape}(s') = \operatorname{shape}(t')$ holds. These components are then used to compute the output using element-wise product ($\odot$) and element-wise exponentiation with base $e$ and element-wise addition ($+$). Equation (6) can be rewritten to obtain an exact inverse function as shown in (7), which uses element-wise division ($/$) and element-wise subtraction ($-$). Figure 2 shows a graphical representation of the affine coupling and its inverse. 
+Equation (6) gives the affine coupling, introduced by @dinh2016density and later used by @kingma2018glow, which is more expressive than the additive coupling. The affine coupling, similar to the additive coupling, supports a reversible implementations through arbitrary (nonlinear) functions $\mathcal{F}$ and $\mathcal{G}$. It also first computes $y_1$ from input partitions $x_1, x_2$ and function $\mathcal{F}$ and subsequently it computes $y_2$ from partitions $y_1, x_2$ and function $\mathcal{G}$. The difference with the additive coupling is that now the functions $\mathcal{F}=(s,t)$ and $\mathcal{G}=(s',t')$ each produce two equally sized partitions for scaling and translation, so $\operatorname{shape}(x_1) = \operatorname{shape}(s) = \operatorname{shape}(t) = \operatorname{shape}(s') = \operatorname{shape}(t')$ holds. These components are then used to compute the output using element-wise product ($\odot$) and element-wise exponentiation with base $e$ and element-wise addition ($+$). Equation (6) can be rewritten to obtain an exact inverse function as shown in (7), which uses element-wise division ($/$) and element-wise subtraction ($-$). Figure 2 shows a graphical representation of the affine coupling and its inverse. 
 
 ![Graphical representation of the affine coupling. The left graph shows the forward computations and the right graph shows its inverse. Here, $\odot, /, +, -,$ and $e$ stand for element-wise multiplication, element-wise division, element-wise addition, element-wise subtraction, and element-wise exponentiation with base $e$ respectively. First, $s, t$ are computed for $\mathcal{F}(x_2)$, next input $x_1$ is element-wise multiplied with $e^{s}$ and added to $t$ to form $y_1$, subsequently $s', t'$ are computed for $\mathcal{G}(y_1)$ and then $x_2$ is element-wise multiplied with $e^{s'}$ and added to $t'$ to form $y_2$.](affine_005.pdf)
 
@@ -108,7 +108,7 @@ The reversible block $R$ can be chained by subsequent reversible blocks, e.g.: $
 
 ## Memory savings
 
-**Table 1:** Comparison of memory and computational complexity for training a residual network (ResNet) between various memory saving techniques (extended table from [@Gomez17]). $L$ depicts the number of residual layers in the ResNet.
+**Table 1:** Comparison of memory and computational complexity for training a residual network (ResNet) between various memory saving techniques (extended table from @Gomez17). $L$ depicts the number of residual layers in the ResNet.
 
 \begin{center}
 
@@ -117,10 +117,10 @@ The reversible block $R$ can be chained by subsequent reversible blocks, e.g.: $
 \begin{tabular}{llp{2.5cm}p{2.5cm}}
 \hline \textbf{Technique} & \textbf{Authors} & \textbf{Memory Complexity} & \textbf{Computational Complexity} \\ \hline
 Naive & & $O(L)$ & $O(L)$ \\
-Checkpointing & (Martens et al. 2012) & $O(\sqrt{L})$ & $O(L)$ \\
-Recursive & (Chen et al. 2016) & $O(\log L)$ & $O(L \log L)$ \\
-Additive coupling & (Gomez et al. 2017) & $O(1)$ & $O(L)$ \\
-Affine coupling & (Dinh et al. 2016) & $O(1)$ & $O(L)$ \\ \hline
+Checkpointing & Martens et al. (2012) & $O(\sqrt{L})$ & $O(L)$ \\
+Recursive & Chen et al. (2016) & $O(\log L)$ & $O(L \log L)$ \\
+Additive coupling & Gomez et al. (2017) & $O(1)$ & $O(L)$ \\
+Affine coupling & Dinh et al. (2016) & $O(1)$ & $O(L)$ \\ \hline
 \end{tabular}
 
 \vspace{0.6cm}
@@ -131,7 +131,7 @@ The reversible block model has an advantageous memory footprint when chained in 
 
 # Experiments and results
 
- **Table 2a:** Accuracy comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning]. Accuracies were approximately similar between implementations.
+ **Table 2a:** Accuracy comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from @Gomez17 on Cifar-10 and Cifar-100 [@krizhevsky2009learning]. Accuracies were approximately similar between implementations.
  
 \begin{center}
  
@@ -152,7 +152,7 @@ RevNet-164 & 94.56  & 94.90  & 76.39  & 76.90 \\ \hline
 
 \end{center}
 
-**Table 2b:** Training time (in hours:minutes) comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning]. Training times were significantly less for the PyTorch implementation than for the Tensorflow implementation.
+**Table 2b:** Training time (in hours:minutes) comparison of the PyTorch implementation (MemCNN) versus the Tensorflow implementation from @Gomez17 on Cifar-10 and Cifar-100 [@krizhevsky2009learning]. Training times were significantly less for the PyTorch implementation than for the Tensorflow implementation.
 
 \begin{center}
 
@@ -173,7 +173,7 @@ RevNet-164 & 13:09    & 7:21  & 13:12     & 7:17 \\ \hline
 
 \end{center}
 
-To validate MemCNN, we reproduced the experiments from [@Gomez17] on Cifar-10 and Cifar-100 [@krizhevsky2009learning] using their Tensorflow [@TF2015] implementation on GitHub\footnote{\url{https://github.com/renmengye/revnet-public}}, and made a direct comparison with our PyTorch implementation on accuracy and train time. We have tried to keep all the experimental settings, like data loading, loss function, train procedure, and training parameters, as similar as possible. All experiments were performed on a single NVIDIA GeForce GTX 1080 with 8GB of RAM. The accuracies and training time results are listed in respectively Table 2a and Table 2b. Model performance of our PyTorch implementation obtained similar accuracy to the TensorFlow implementation with less training time on Cifar-10 and Cifar-100. All models and experiments are included in MemCNN and can be rerun for reproducibility.
+To validate MemCNN, we reproduced the experiments from @Gomez17 on Cifar-10 and Cifar-100 [@krizhevsky2009learning] using their Tensorflow [@TF2015] implementation on GitHub\footnote{\url{https://github.com/renmengye/revnet-public}}, and made a direct comparison with our PyTorch implementation on accuracy and train time. We have tried to keep all the experimental settings, like data loading, loss function, train procedure, and training parameters, as similar as possible. All experiments were performed on a single NVIDIA GeForce GTX 1080 with 8GB of RAM. The accuracies and training time results are listed in respectively Table 2a and Table 2b. Model performance of our PyTorch implementation obtained similar accuracy to the TensorFlow implementation with less training time on Cifar-10 and Cifar-100. All models and experiments are included in MemCNN and can be rerun for reproducibility.
 
  **Table 3:** Model statistics for all PyTorch model implementations on memory usage (parameters and activations) in MB during training and the number of layers and parameters. The ResNet model was implemented using a conventional non-reversible implementation while the RevNet model uses MemCNN with memory saving reversible blocks. To facilitate comparison, each row lists the statistics of one ResNet and one RevNet model which have a comparable number of layers and number of parameters. Significant memory savings for the activations were observed when using reversible operations (RevNet) as the number of layers increased. Model parameter memory usage stayed roughly the same between implementations. 
 
@@ -197,7 +197,7 @@ Table 3 shows memory usage statistics (parameters and activations) during traini
 
 # Works using MemCNN
 
-MemCNN has recently been used to create reversible GANs for memory-efficient image-to-image translation by [@Ouderaa_2019_CVPR]. Image-to-image translation considers the problem of mapping both $X \rightarrow Y$ and $Y \rightarrow X$ given two image domains $X$ and $Y$ using either paired or unpaired examples. In this work, the CycleGAN [@zhu2017unpaired] model has been enlarged and extended with an invertible core using the reversible block, which they call RevGAN. Since the invertible core is weight tied, training the model for the mapping $X \rightarrow Y$ automatically trains the model for mapping $Y \rightarrow X$. They show similar or increased performance of RevGAN with respect to similar non-invertible models like the CycleGAN with less memory overhead during training. The RevGAN model has also been applied to chest CT images [@ouderaa:MIDLAbstract2019a].
+MemCNN has recently been used to create reversible GANs for memory-efficient image-to-image translation by @Ouderaa_2019_CVPR. Image-to-image translation considers the problem of mapping both $X \rightarrow Y$ and $Y \rightarrow X$ given two image domains $X$ and $Y$ using either paired or unpaired examples. In this work, the CycleGAN [@zhu2017unpaired] model has been enlarged and extended with an invertible core using the reversible block, which they call RevGAN. Since the invertible core is weight tied, training the model for the mapping $X \rightarrow Y$ automatically trains the model for mapping $Y \rightarrow X$. They show similar or increased performance of RevGAN with respect to similar non-invertible models like the CycleGAN with less memory overhead during training. The RevGAN model has also been applied to chest CT images [@ouderaa:MIDLAbstract2019a].
 
 # Conclusion
 
