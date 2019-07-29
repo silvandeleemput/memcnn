@@ -1,39 +1,47 @@
-@article{Gomez17,
+@misc{Gomez17,
     author    = {A. N. Gomez and
                M. Ren and
                R. Urtasun and
                R. B. Grosse},
     title     = {The Reversible Residual Network: Backpropagation Without Storing Activations},
-    journal = {arXiv preprint arXiv:1707.04585},
-    year      = {2017}
+    howpublished = {{\tt arXiv:1707.04585 [cs.CV]}},
+    url = {https://arxiv.org/abs/1707.04585},
+    year      = 2017
 }
 
-@article{Dinh14,
+@misc{Dinh14,
     author    = {L. Dinh and
                D. Krueger and
                Y. Bengio},
     title     = {{NICE:} Non-linear Independent Components Estimation},
-    journal = {arXiv preprint arXiv:1410.8516},
-    year      = {2014}
+    howpublished = {{\tt arXiv:1410.8516 [cs.LG]}},
+    url = {https://arxiv.org/abs/1410.8516},
+    year      = 2014
 }
 
 @article{He2016,
-    author = {K. He and X. Zhang and S. Ren and J. Sun},
     title = {Identity Mappings in Deep Residual Networks},
-    journal = {arXiv preprint arXiv:1603.05027},
-    year = {2016},
+    note = {{\tt arXiv:1603.05027 [cs.CV]}},
+    year = 2016,
     doi = {10.1007/978-3-319-46493-0_38},
+  publisher = {Springer International Publishing},
+  pages = {630--645},
+  author = {Kaiming He and Xiangyu Zhang and Shaoqing Ren and Jian Sun},
+  booktitle = {Computer Vision {\textendash} {ECCV} 2016}
 }
 
 @article{He2015,
-    author = {K. He and X. Zhang and S. Ren and J. Sun},
-    title = {Deep Residual Learning for Image Recognition},
-    journal = {arXiv preprint arXiv:1512.03385},
-    year = {2015},
-    doi = {10.1109/cvpr.2016.90}
+  note = {{\tt arXiv:1512.03385 [cs.CV]}},
+  doi = {10.1109/cvpr.2016.90},
+  year = {2016},
+  month = jun,
+  publisher = {{IEEE}},
+  author = {Kaiming He and Xiangyu Zhang and Shaoqing Ren and Jian Sun},
+  title = {Deep Residual Learning for Image Recognition},
+  booktitle = {2016 {IEEE} Conference on Computer Vision and Pattern Recognition ({CVPR})}
 }
 
-@article{Chang17,
+@misc{Chang17,
     author    = {B. Chang and
                L. Meng and
                E. Haber and
@@ -41,34 +49,40 @@
                D. Begert and
                E. Holtham},
     title     = {Reversible Architectures for Arbitrarily Deep Residual Neural Networks},
-    journal = {arXiv preprint arXiv:1709.03698},
-    year      = {2017}
+    howpublished = {{\tt arXiv:1709.03698 [cs.CV]}},
+    url = {https://arxiv.org/abs/1709.03698},
+    year      = 2017
 }
 
-@article{krizhevsky2009learning,
-    title={Learning multiple layers of features from tiny images},
-    author={Krizhevsky, A. and Hinton, G.},
-    year={2009},
-    publisher={Citeseer}
+@mastersthesis{krizhevsky2009learning,
+  author = {Krizhevsky, A.},
+  title = {Learning Multiple Layers of Features from Tiny Images},
+  school       = {University of Toronto},
+  year         = 2009,
+  address      = {Toronto, Ontario, Canada},
+  month        = apr,
 }
 
 @inproceedings{imagenet_cvpr09,
-    author = {Deng, J. and Dong, W. and Socher, R. and Li, L.-J. and Li, K. and Fei-Fei, L.},
-    title = {{ImageNet}: A Large-Scale Hierarchical Image Database},
-    booktitle = {CVPR09},
-    year = {2009},
-    doi = {10.1109/cvprw.2009.5206848}
+    doi = {10.1109/cvprw.2009.5206848},
+    year = 2009,
+  month = jun,
+  publisher = {{IEEE}},
+  author = {Jia Deng and Wei Dong and Richard Socher and Li-Jia Li and  Kai Li and  Li Fei-Fei},
+  title = {{ImageNet}: A large-scale hierarchical image database},
+  booktitle = {2009 {IEEE} Conference on Computer Vision and Pattern Recognition}
 }
 
 @inproceedings{jaco18,
     author = {J.-H. Jacobsen and A.W.M. Smeulders and E. Oyallon},
     title = {{i-RevNet}: Deep Invertible Networks},
     booktitle = {ICLR},
-    year = {2018}
+    year = {2018},
+    howpublished = {{\tt arXiv:1802.07088 [cs.LG]}}
 }
 
 @misc{TF2015,
-title={ {TensorFlow}: Large-Scale Machine Learning on Heterogeneous Systems},
+title={{TensorFlow}: Large-Scale Machine Learning on Heterogeneous Systems},
 note={Software available from tensorflow.org},
 author={
     M.~Abadi and
@@ -112,59 +126,66 @@ author={
     Y.~Yu and
     X.~Zheng},
     year={2015},
+    url={http://tensorflow.org/},
 }
 
-@article{paszke2017automatic,
+@inproceedings{paszke2017automatic,
     title={Automatic differentiation in {PyTorch}},
     author={Paszke, A. and Gross, S. and Chintala, S. and Chanan, G. and Yang, E. and DeVito, Z. and Lin, Z. and Desmaison, A. and Antiga, L. and Lerer, A.},
     booktitle={NIPS-W},
-    year={2017}
+    year={2017},
+    howpublished = {\url{https://openreview.net/forum?id=BJJsrmfCZ}},
 }
 
 @inproceedings{kingma2018glow,
-    title={Glow: Generative flow with invertible 1x1 convolutions},
-    author={Kingma, Durk P and Dhariwal, Prafulla},
-    booktitle={Advances in Neural Information Processing Systems},
-    pages={10215--10224},
-    year={2018}
+  title = {Glow: Generative Flow with Invertible 1x1 Convolutions},
+  author = {Kingma, Durk P and Dhariwal, Prafulla},
+  booktitle = {Advances in Neural Information Processing Systems 31},
+  editor = {S. Bengio and H. Wallach and H. Larochelle and K. Grauman and N. Cesa-Bianchi and R. Garnett},
+  pages = {10215--10224},
+  year = {2018},
+  publisher = {Curran Associates, Inc.},
+  url = {http://papers.nips.cc/paper/8224-glow-generative-flow-with-invertible-1x1-convolutions.pdf}
 }
 
-@article{dinh2016density,
-    title={Density estimation using real nvp},
+@misc{dinh2016density,
+    title={Density estimation using {Real NVP}},
     author={Dinh, Laurent and Sohl-Dickstein, Jascha and Bengio, Samy},
-    journal={arXiv preprint arXiv:1605.08803},
-    year={2016}
+    year={2016},
+    howpublished = {{\tt arXiv:1605.08803 [cs.LG]}},
+    url = {https://arxiv.org/abs/1605.08803}
 }
 
-@incollection{martens2012training,
-    title={Training deep and recurrent networks with hessian-free optimization},
-    author={Martens, James and Sutskever, Ilya},
-    booktitle={Neural networks: Tricks of the trade},
-    pages={479--535},
-    year={2012},
-    publisher={Springer},
-    doi={10.1007/978-3-642-35289-8_27}
+@incollection{martens2012training,  
+  doi = {10.1007/978-3-642-35289-8_27},
+  year = 2012,
+  publisher = {Springer Berlin Heidelberg},
+  pages = {479--535},
+  author = {James Martens and Ilya Sutskever},
+  title = {Training Deep and Recurrent Networks with Hessian-Free Optimization},
+  booktitle = {Neural Networks: Tricks of the Trade: Second Edition}
 }
 
-@article{chen2016training,
+@misc{chen2016training,
     title={Training deep nets with sublinear memory cost},
     author={Chen, Tianqi and Xu, Bing and Zhang, Chiyuan and Guestrin, Carlos},
-    journal={arXiv preprint arXiv:1604.06174},
-    year={2016}
+    howpublished = {{\tt arXiv:1604.06174 [cs.LG]}},
+    url = {https://arxiv.org/abs/1604.06174},
+    year=2016
 }
 
 @InProceedings{Ouderaa_2019_CVPR,
     author = {Ouderaa, Tycho F.A. van der and Worrall, Daniel E.},
-    title = {Reversible GANs for Memory-Efficient Image-To-Image Translation},
-    booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month = {June},
-    year = {2019}
+    title = {Reversible {GANs} for Memory-Efficient Image-To-Image Translation},
+    booktitle = {{The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}},
+    month = jun,
+    year = 2019
 }
 
 @inproceedings{zhu2017unpaired,
     title={Unpaired image-to-image translation using cycle-consistent adversarial networks},
     author={Zhu, Jun-Yan and Park, Taesung and Isola, Phillip and Efros, Alexei A},
-    booktitle={Proceedings of the IEEE international conference on computer vision},
+    booktitle={{Proceedings of the IEEE International Conference on Computer Vision}},
     pages={2223--2232},
     year={2017},
     doi={10.1109/iccv.2017.244},
@@ -175,7 +196,7 @@ author={
     author={Tycho F.A. van der Ouderaa and Daniel E. Worrall and Bram van Ginneken},
     booktitle={International Conference on Medical Imaging with Deep Learning},
     address={London, United Kingdom},
-    year={2019},
-    month={08--10 Jul},
+    year=2019,
+    month=jul,
     url={https://openreview.net/forum?id=SkxueFsiFV}
 }
