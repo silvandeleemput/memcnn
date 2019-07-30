@@ -42,6 +42,10 @@ MemCNN
         :alt: GitHub - Repository license
         :target: https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt
 
+.. image:: http://joss.theoj.org/papers/10.21105/joss.01576/status.svg
+        :alt: JOSS - DOI
+        :target: https://doi.org/10.21105/joss.01576
+
 A `PyTorch <http://pytorch.org/>`__ framework for developing memory-efficient invertible neural networks.
 
 * Free software: `MIT license <https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt>`__ (please cite our work if you use it)
@@ -208,11 +212,19 @@ If you use our code, please cite:
 
 .. code:: bibtex
 
-    @inproceedings{
-      leemput2018memcnn,
-      title={MemCNN: a Framework for Developing Memory Efficient Deep Invertible Networks},
-      author={Sil C. van de Leemput, Jonas Teuwen, Rashindra Manniesing},
-      booktitle={ICLR 2018 Workshop Track},
-      year={2018},
-      url={https://openreview.net/forum?id=r1KzqK1wz},
+    @article{Van2019MemCNN,
+      journal = {Journal of Open Source Software},
+      doi = {10.21105/joss.01576},
+      issn = {2475-9066},
+      number = {39},
+      publisher = {The Open Journal},
+      title = {MemCNN: A Python/PyTorch package for creating memory-efficient invertible neural networks},
+      url = {http://dx.doi.org/10.21105/joss.01576},
+      volume = {4},
+      author = {Van De Leemput, Sil and Teuwen, Jonas and Van Ginneken, Bram and Manniesing, Rashindra},
+      pages = {1576},
+      date = {2019-07-30},
+      year = {2019},
+      month = {7},
+      day = {30},
     }
