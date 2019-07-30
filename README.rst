@@ -221,7 +221,7 @@ If you use our code, please cite:
       title = {MemCNN: A Python/PyTorch package for creating memory-efficient invertible neural networks},
       url = {http://dx.doi.org/10.21105/joss.01576},
       volume = {4},
-      author = {Van De Leemput, Sil and Teuwen, Jonas and Van Ginneken, Bram and Manniesing, Rashindra},
+      author = {van de Leemput, Sil and Teuwen, Jonas and van Ginneken, Bram and Manniesing, Rashindra},
       pages = {1576},
       date = {2019-07-30},
       year = {2019},
