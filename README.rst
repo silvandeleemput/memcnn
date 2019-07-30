@@ -212,7 +212,7 @@ If you use our code, please cite:
 
 .. code:: bibtex
 
-    @article{Van2019MemCNN,
+    @article{vandeLeemput2019MemCNN,
       journal = {Journal of Open Source Software},
       doi = {10.21105/joss.01576},
       issn = {2475-9066},
