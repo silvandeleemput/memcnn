@@ -26,6 +26,8 @@ bibliography: paper.bib
 
 # Summary
 
+Neural networks are computational models that were originally inspired by biological neural networks like animal brains. These networks are composed of many small computational units called neurons that perform elementary calculations. Instead of explicitly programming the behavior of neural networks, these models can be trained to perform tasks, like classifying images, by presenting them examples. Sufficiently complex neural networks can automatically extract task-relevant characteristics from the presented examples without having prior knowledge about the task domain, which makes them attractive for many complicated real-world applications.   
+
 Reversible operations have recently been successfully applied to classification problems to reduce memory requirements during neural network training. This feature is accomplished by removing the need to store the input activation for computing the gradients at the backward pass and instead reconstruct them on demand. However, current approaches rely on custom implementations of backpropagation, which limits applicability and extendibility. We present MemCNN, a novel PyTorch framework that simplifies the application of reversible functions by removing the need for a customized backpropagation. The framework contains a set of practical generalized tools, which can wrap common operations like convolutions and batch normalization and which take care of memory management. We validate the presented framework by reproducing state-of-the-art experiments using MemCNN and by comparing classification accuracy and training time on Cifar-10 and Cifar-100. Our MemCNN implementations achieved similar classification accuracy and faster training times while retaining compatibility with the default backpropagation facilities of PyTorch.
 
 # Background
@@ -45,12 +47,12 @@ The different reversible architectures proposed in the literature [@Gomez17; @Ch
 ## The reversible block
 The core operator of MemCNN is the reversible block which is an operator which takes a function $f$ and outputs a function $R : X \to Y$, and an inverse function $R^{-1} : Y \rightarrow{X}$ which resembles an invertible version of $f$. Here, $x\in X$ and $y\in Y$ can be arbitrary tensors with the same size and number of dimension, i.e.: $\operatorname{shape}(x)=\operatorname{shape}(y)$. Additionally, it must be possible to partition the input $x=(x_1, x_2)$ and output tensors $y=(y_1, y_2)$ in half, where each partition has the same shape, i.e.: $\operatorname{shape}(x_1) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2)$. Formally, the reversible block operation (1), its inverse (2), and its partition constraints (3) provide a sufficiently general framework for implementing reversible operations. 
 
+For example, if one wants to create a reversible block performing a convolution followed by a ReLu $f$, the input $x \in X$ is partitioned in $(x_1, x_2)$ of equal sizes to which this convolution block $f$ is applied twice (say $\mathcal{F}$ and $\mathcal{G}$). The Reversible Block takes these two operators ($\mathcal{F}$ and $\mathcal{G}$) and outputs a "resblock"-like version $R$ of the operator and an explicit inverse $R^{-1}$. Effectively the learnable function $f$ is replaced by a learnable approximation $R$ with an explicit inverse $R^{-1}$.
+
 \begin{equation} \quad R(x) = y \end{equation}
 \begin{equation} R^{-1}(y)  = x  \end{equation}
 with
 \begin{equation} \operatorname{shape}(x_i) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2) \end{equation}
-
-For example, if one wants to create a reversible block performing a convolution followed by a ReLu $f$, the input $x \in X$ is partitioned in $(x_1, x_2)$ of equal sizes to which this convolution block $f$ is applied twice (say $\mathcal{F}$ and $\mathcal{G}$). The Reversible Block takes these two operators ($\mathcal{F}$ and $\mathcal{G}$) and outputs a "resblock"-like version $R$ of the operator and an explicit inverse $R^{-1}$. Effectively the learnable function $f$ is replaced by a learnable approximation $R$ with an explicit inverse $R^{-1}$.
 
 ## Couplings
 
@@ -100,11 +102,9 @@ The reversible block has been implemented as a \texttt{torch.nn.Module} which wr
 
 ## Building larger networks
 
-![Graphical representation of chaining multiple reversible block layers. ](coupling_001.pdf)
-
 The reversible block $R$ can be chained by subsequent reversible blocks, e.g.: $R_3 \circ R_2 \circ R_1$ for reversible blocks $R_1, R_2, R_3$, which creates a fully reversible chain of operations (see Figure 3). Additionally, reversible blocks can be mixed with regular functions $f$, e.g. $f \circ R$ or $R \circ f$ for reversible block $R$ and regular function $f$. Note that mixing regular functions with reversible blocks often breaks the invertibility of reversible chains. 
 
-\break
+![Graphical representation of chaining multiple reversible block layers. ](coupling_001.pdf)
 
 ## Memory savings
 
@@ -128,6 +128,8 @@ Affine coupling & Dinh et al. (2016) & $O(1)$ & $O(L)$ \\ \hline
 \end{center}
 
 The reversible block model has an advantageous memory footprint when chained in a sequence when training neural networks. After computing each $R(x) = y$ by (1) on the forward pass, input $x$ can be freed from memory and be recomputed on the backward pass, using the inverse function $R^{-1}(y)=x$ from (2). Once the input is restored, the gradients for the weights and the inputs can be recomputed as normal using the PyTorch `autograd' solver. This effectively yields a memory complexity of $O(1)$ in the number of chained reversible blocks. Table 1 shows a comparison of memory versus computational complexity for different memory saving techniques.
+
+\break
 
 # Experiments and results
 
@@ -175,6 +177,10 @@ RevNet-164 & 13:09    & 7:21  & 13:12     & 7:17 \\ \hline
 
 To validate MemCNN, we reproduced the experiments from @Gomez17 on Cifar-10 and Cifar-100 [@krizhevsky2009learning] using their Tensorflow [@TF2015] implementation on GitHub\footnote{\url{https://github.com/renmengye/revnet-public}}, and made a direct comparison with our PyTorch implementation on accuracy and train time. We have tried to keep all the experimental settings, like data loading, loss function, train procedure, and training parameters, as similar as possible. All experiments were performed on a single NVIDIA GeForce GTX 1080 with 8GB of RAM. The accuracies and training time results are listed in respectively Table 2a and Table 2b. Model performance of our PyTorch implementation obtained similar accuracy to the TensorFlow implementation with less training time on Cifar-10 and Cifar-100. All models and experiments are included in MemCNN and can be rerun for reproducibility.
 
+Table 3 shows memory usage statistics (parameters and activations) during training for all PyTorch models. Here, the ResNet model uses a conventional implementation and the RevNet model uses the reversible blocks from MemCNN. The results show that significant activation memory reduction was obtained using the reversible block implementation (RevNet) when the number of layers of the models increased. 
+
+\break
+
  **Table 3:** Model statistics for all PyTorch model implementations on memory usage (parameters and activations) in MB during training and the number of layers and parameters. The ResNet model was implemented using a conventional non-reversible implementation while the RevNet model uses MemCNN with memory saving reversible blocks. To facilitate comparison, each row lists the statistics of one ResNet and one RevNet model which have a comparable number of layers and number of parameters. Significant memory savings for the activations were observed when using reversible operations (RevNet) as the number of layers increased. Model parameter memory usage stayed roughly the same between implementations. 
 
 \begin{center}
@@ -192,8 +198,6 @@ To validate MemCNN, we reproduced the experiments from @Gomez17 on Cifar-10 and 
 \vspace{0.6cm}
 
 \end{center}
-
-Table 3 shows memory usage statistics (parameters and activations) during training for all PyTorch models. Here, the ResNet model uses a conventional implementation and the RevNet model uses the reversible blocks from MemCNN. The results show that significant activation memory reduction was obtained using the reversible block implementation (RevNet) when the number of layers of the models increased. 
 
 # Works using MemCNN
 
