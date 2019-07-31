@@ -202,11 +202,9 @@ Works using MemCNN
 Citation
 --------
 
-Reference: Sil C. van de Leemput, Jonas Teuwen, Rashindra Manniesing.
-`MemCNN: a Framework for Developing Memory Efficient Deep Invertible
-Networks <https://openreview.net/forum?id=r1KzqK1wz>`__. *International
-Conference on Learning Representations (ICLR) 2018 Workshop Track.
-(https://iclr.cc/)*
+Sil C. van de Leemput, Jonas Teuwen, Bram van Ginneken, and Rashindra Manniesing.
+MemCNN: A Python/PyTorch package for creating memory-efficient invertible neural networks.
+Journal of Open Source Software, 4, 1576, http://dx.doi.org/10.21105/joss.01576, 2019.
 
 If you use our code, please cite:
 
