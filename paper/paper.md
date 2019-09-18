@@ -52,7 +52,7 @@ For example, if one wants to create a reversible block performing a convolution 
 \begin{equation} \quad R(x) = y \end{equation}
 \begin{equation} R^{-1}(y)  = x  \end{equation}
 with
-\begin{equation} \operatorname{shape}(x_i) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2) \end{equation}
+\begin{equation} \operatorname{shape}(x_1) = \operatorname{shape}(x_2) = \operatorname{shape}(y_1) = \operatorname{shape}(y_2) \end{equation}
 
 ## Couplings
 
