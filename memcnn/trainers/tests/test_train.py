@@ -1,10 +1,12 @@
-from pathlib import Path
-
 import pytest
-from memcnn.train import run_experiment, main
 import os
 import sys
 import torch
+from memcnn.train import run_experiment, main
+try:
+    from pathlib2 import Path
+except ImportError:
+    from pathlib import Path
 
 
 def test_main(tmp_path):
