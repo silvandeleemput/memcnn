@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from memcnn.train import run_experiment, main
 import os
@@ -38,45 +40,32 @@ class DummyModel(torch.nn.Module):
         return self.conv(x)
 
 
-content = '{' \
-           '    "testsetup":' \
-           '    {' \
-           '        "data_loader_params": {},' \
-           '        "model": "memcnn.trainers.tests.test_train.DummyModel",' \
-           '        "model_params": {' \
-           '            "block":"memcnn.trainers.tests.test_train.DummyDataset"' \
-           '        },' \
-           '        "optimizer": "torch.optim.SGD",' \
-           '        "optimizer_params": {' \
-           '            "lr":0.1' \
-           '        },' \
-           '        "trainer": "memcnn.trainers.tests.test_train.dummy_trainer",' \
-           '        "trainer_params":{' \
-           '            "loss":"memcnn.trainers.tests.test_train.DummyDataset"' \
-           '        },' \
-           '        "data_loader": "memcnn.trainers.tests.test_train.dummy_dataloaders",' \
-           '        "data_loader_params": {"dataset": "memcnn.trainers.tests.test_train.DummyDataset", "workers":0}' \
-           '    }' \
-           '}'
-
-
 def test_run_experiment(tmp_path):
     exptags = ['testsetup']
-    exp_file2 = str(tmp_path / "exp_file2")
+    exp_file = str(Path(__file__).parent / "resources" / "experiments.json")
     data_dir = str(tmp_path / "tmpdata")
     results_dir = str(tmp_path / "resdir")
-    with open(exp_file2, 'w') as f2:
-        f2.write(content)
-
-    start_fresh = True
-    use_cuda = False
-    workers = None
-
+    run_params = dict(
+        experiment_tags=exptags, data_dir=data_dir, results_dir=results_dir,
+        start_fresh=True, use_cuda=False, workers=None, experiments_file=exp_file
+    )
     with pytest.raises(RuntimeError):
-        run_experiment(exptags, data_dir, results_dir, start_fresh, use_cuda, workers, exp_file2)
+        run_experiment(**run_params)
     os.makedirs(data_dir)
     with pytest.raises(RuntimeError):
-        run_experiment(exptags, data_dir, results_dir, start_fresh, use_cuda, workers, exp_file2)
+        run_experiment(**run_params)
     os.makedirs(results_dir)
-    run_experiment(exptags, data_dir, results_dir, start_fresh, use_cuda, workers, exp_file2)
-    run_experiment(exptags, data_dir, results_dir, False, use_cuda, workers, exp_file2)
+    run_experiment(**run_params)
+    run_params["start_fresh"] = False
+    run_experiment(**run_params)
+
+
+def test_train_revnet164_with_memory_saving(tmp_path):
+    exptags = ['cifar10', 'revnet164', 'epoch1']
+    exp_file = str(Path(__file__).parent / "resources" / "experiments.json")
+    data_dir = str(tmp_path / "tmpdata")
+    results_dir = str(tmp_path / "resdir")
+    os.makedirs(data_dir)
+    os.makedirs(results_dir)
+    run_experiment(experiment_tags=exptags, data_dir=data_dir, results_dir=results_dir,
+                   start_fresh=True, use_cuda=False, workers=None, experiments_file=exp_file)
