@@ -9,20 +9,28 @@ class NSamplesRandomSampler(Sampler):
 
     Arguments:
         data_source (Dataset): dataset to sample from
-        nsamples (int): number of total samples
+        nsamples (int): number of total samples. Note: will always be cast to int
     """
+
+    @property
+    def nsamples(self):
+        return self._nsamples
+
+    @nsamples.setter
+    def nsamples(self, value):
+        self._nsamples = int(value)
 
     def __init__(self, data_source, nsamples):
         self.data_source = data_source
-        self.nsamples = int(nsamples)
+        self.nsamples = nsamples
 
     def __iter__(self):
         samples = torch.LongTensor()
-        ldsource = len(self.data_source)
-        for _ in range(self.nsamples // ldsource):
-            samples = torch.cat((samples, torch.randperm(len(self.data_source)).long()))
-        if self.nsamples % ldsource > 0:
-            samples = torch.cat((samples, torch.randperm(self.nsamples % ldsource).long()))
+        len_data_source = len(self.data_source)
+        for _ in range(self.nsamples // len_data_source):
+            samples = torch.cat((samples, torch.randperm(len_data_source).long()))
+        if self.nsamples % len_data_source > 0:
+            samples = torch.cat((samples, torch.randperm(self.nsamples % len_data_source).long()))
         return iter(samples)
 
     def __len__(self):

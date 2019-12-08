@@ -2,6 +2,15 @@
 History
 =======
 
+1.0.1 (2019-12-08)
+------------------
+
+* Bug fixes related to SummaryIterator import in Tensorflow 2
+  (location of summary_iterator has changed in TensorFlow)
+* Bug fixes related to NSamplesRandomSampler nsamples attribute
+  (would crash if no-gpu and numpy.int were given)
+
+
 1.0.0 (2019-07-28)
 ------------------
 

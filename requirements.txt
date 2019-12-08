@@ -6,3 +6,4 @@ tensorflow>=1.11.0
 torch>=0.4.0
 torchvision
 tqdm
+pathlib2
