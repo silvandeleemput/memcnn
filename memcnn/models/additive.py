@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import copy
 from torch import set_grad_enabled
-import warnings
 import numpy as np
 
 
@@ -47,7 +46,6 @@ class AdditiveBlock(nn.Module):
         elif self.implementation_fwd == 1:
             out = AdditiveBlockFunction2.apply(*args)
         elif self.implementation_fwd == -1:
-            warnings.warn('Using direct non-memory saving implementation.', NonMemorySavingWarning)
             x1, x2 = torch.chunk(x, 2, dim=1)
             x1, x2 = x1.contiguous(), x2.contiguous()
             fmd = self.Fm.forward(x2)

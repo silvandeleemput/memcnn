@@ -70,4 +70,7 @@ def test_train_revnet164_with_memory_saving(tmp_path):
     os.makedirs(data_dir)
     os.makedirs(results_dir)
     run_experiment(experiment_tags=exptags, data_dir=data_dir, results_dir=results_dir,
-                   start_fresh=True, use_cuda=False, workers=None, experiments_file=exp_file)
+                   start_fresh=True, use_cuda=False, workers=None, experiments_file=exp_file,
+                   disp_iter=1,
+                   save_iter=1,
+                   valid_iter=1,)

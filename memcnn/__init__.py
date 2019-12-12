@@ -7,8 +7,9 @@ __email__ = 'silvandeleemput@gmail.com'
 __version__ = '1.0.1'
 
 
-from memcnn.models.revop import ReversibleBlock
+from memcnn.models.revop import ReversibleBlock, ReversibleModule
 
 __all__ = [
-    'ReversibleBlock'
+    'ReversibleBlock',
+    'ReversibleModule'
 ]

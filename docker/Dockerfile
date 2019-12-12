@@ -21,6 +21,8 @@ RUN usermod -a -G sudo user
 
 # Install necessary python libraries
 RUN python3.6 -m pip install pip --upgrade
+RUN python3.6 -m pip install https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
+RUN python3.6 -m pip install https://download.pytorch.org/whl/cu100/torchvision-0.3.0-cp36-cp36m-linux_x86_64.whl
 RUN python3.6 -m pip install memcnn
 
 # Set MemCNN config file for user environement
