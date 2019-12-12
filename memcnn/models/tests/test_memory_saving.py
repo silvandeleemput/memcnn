@@ -5,8 +5,7 @@ import math
 from collections import defaultdict
 import torch
 import torch.nn
-import memcnn.models.revop as revop
-from memcnn.models.affine import AffineAdapterNaive
+from memcnn.models.tests.test_revop import SubModuleStack, SubModule
 
 
 def readable_size(num_bytes):
@@ -193,10 +192,9 @@ class MemReporter(object):
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-@pytest.mark.parametrize('implementation_fwd', [0, 1])
 @pytest.mark.parametrize('keep_input', [True, False])
 @pytest.mark.parametrize('device', ['cpu', 'cuda'])
-def test_memory_saving(device, coupling, implementation_fwd, keep_input):
+def test_memory_saving(device, coupling, keep_input):
     """Test memory saving of the reversible block
 
     * tests fitting a large number of images by creating a deep network requiring large
@@ -224,64 +222,43 @@ def test_memory_saving(device, coupling, implementation_fwd, keep_input):
 
     gc.disable()
     gc.collect()
-    dims = [2, 10, 10, 10]
-    depth = 5
-    memuse = float(np.prod(dims + [depth, 4, ])) / float(1024 ** 2)
-    xx = torch.rand(*dims, device=device, dtype=torch.float32)
-    ytarget = torch.rand(*dims, device=device, dtype=torch.float32)
 
-    class SubModule(torch.nn.Module):
-        def __init__(self):
-            super(SubModule, self).__init__()
-            self.bn = torch.nn.BatchNorm2d(10 // 2)
-            self.conv = torch.nn.Conv2d(10 // 2, 10 // 2, (3, 3), padding=1)
+    with torch.set_grad_enabled(True):
+        dims = [2, 10, 10, 10]
+        depth = 5
+        memuse = float(np.prod(dims + [depth, 4, ])) / float(1024 ** 2)
+        xx = torch.rand(*dims, device=device, dtype=torch.float32).requires_grad_()
+        ytarget = torch.rand(*dims, device=device, dtype=torch.float32)
 
-        def forward(self, x):
-            return self.bn(self.conv(x))
+        # same convolution test
+        network = SubModuleStack(SubModule(in_filters=5, out_filters=5), depth=depth, keep_input=keep_input, coupling=coupling,
+                                 implementation_fwd=-1, implementation_bwd=-1)
+        network.to(device)
+        network.train()
+        network.zero_grad()
+        optim = torch.optim.RMSprop(network.parameters())
+        optim.zero_grad()
+        mem_start = 0 if not device == 'cuda' else \
+            torch.cuda.memory_allocated() / float(1024 ** 2)
 
-    class SubModuleStack(torch.nn.Module):
-        def __init__(self, gm, coupling='additive', depth=10, implementation_fwd=1,
-                     implementation_bwd=1, keep_input=False):
-            super(SubModuleStack, self).__init__()
-            self.stack = torch.nn.Sequential(
-                *[revop.ReversibleBlock(gm, gm, coupling=coupling, implementation_fwd=implementation_fwd,
-                                        implementation_bwd=implementation_bwd, adapter=AffineAdapterNaive,
-                                        keep_input=keep_input) for _ in range(depth)]
-            )
+        y = network(xx)
+        gc.collect()
+        mem_after_forward = mem_reporter.collect_stats() / float(1024 ** 2) if not device == 'cuda' else \
+            torch.cuda.memory_allocated() / float(1024 ** 2)
+        loss = torch.nn.MSELoss()(y, ytarget)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        gc.collect()
+        # mem_after_backward = mem_reporter.collect_stats() / float(1024 ** 2) if not device == 'cuda' else \
+        #     torch.cuda.memory_allocated() / float(1024 ** 2)
+        gc.enable()
 
-        def forward(self, x):
-            return self.stack(x)
+        if device == 'cpu':
+            memuse = 0.02
 
-    implementation_bwd = 1
-    # same convolution test
-    network = SubModuleStack(SubModule(), depth=depth, keep_input=keep_input, coupling=coupling,
-                             implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
-    network.to(device)
-    network.train()
-    network.zero_grad()
-    optim = torch.optim.RMSprop(network.parameters())
-    optim.zero_grad()
-    mem_start = 0 if not device == 'cuda' else \
-        torch.cuda.memory_allocated() / float(1024 ** 2)
-
-    y = network(xx)
-    gc.collect()
-    mem_after_forward = mem_reporter.collect_stats() / float(1024 ** 2) if not device == 'cuda' else \
-        torch.cuda.memory_allocated() / float(1024 ** 2)
-    loss = torch.nn.MSELoss()(y, ytarget)
-    optim.zero_grad()
-    loss.backward()
-    optim.step()
-    gc.collect()
-    # mem_after_backward = mem_reporter.collect_stats() / float(1024 ** 2) if not device == 'cuda' else \
-    #     torch.cuda.memory_allocated() / float(1024 ** 2)
-    gc.enable()
-
-    if device == 'cpu':
-        memuse = 0.02
-
-    if keep_input:
-        assert mem_after_forward - mem_start >= memuse
-    else:
-        assert mem_after_forward - mem_start < (1 if device == 'cuda' else memuse)
-    # assert math.floor(mem_after_backward - mem_start) >= 9
+        if keep_input:
+            assert mem_after_forward - mem_start >= memuse
+        else:
+            assert mem_after_forward - mem_start < (1 if device == 'cuda' else memuse)
+        # assert math.floor(mem_after_backward - mem_start) >= 9

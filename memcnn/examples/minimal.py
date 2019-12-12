@@ -22,11 +22,18 @@ X = torch.rand(2, 10, 8, 8)
 
 # application of the operation(s) the normal way
 model_normal = ExampleOperation(channels=10)
+model_normal.eval()
+
 Y = model_normal(X)
 
-# application of the operation(s) turned invertible using the reversible block
+# application of the ExampleOperation turned invertible using an additive coupling
 F = ExampleOperation(channels=10 // 2)
-model_invertible = memcnn.ReversibleBlock(F, coupling='additive', keep_input=True, keep_input_inverse=True)
+invertible_function = memcnn.create_coupling(Fm=F, coupling='additive')
+
+# the ReversibleModule can wrap invertible functions and
+# can free memory using the invertible property during training and inference
+model_invertible = memcnn.ReversibleModule(fn=invertible_function, keep_input=True, keep_input_inverse=True)
+model_invertible.eval()  # This is required for any input tensor to the model with requires_grad=True (inference only)
 Y2 = model_invertible(X)
 
 # The input (X) can be approximated (X2) by applying the inverse method of the reversible block on Y2

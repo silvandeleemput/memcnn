@@ -1,3 +1,4 @@
+import warnings
 import pytest
 import torch
 import torch.nn
@@ -5,7 +6,7 @@ import numpy as np
 import copy
 from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid
 from memcnn import ReversibleBlock
-from memcnn.models.revop import ReversibleModule
+from memcnn.models.revop import ReversibleModule, create_coupling
 
 
 def set_seeds(seed):
@@ -27,10 +28,9 @@ class SubModuleStack(torch.nn.Module):
     def __init__(self, Gm, coupling='additive', depth=10, implementation_fwd=-1, implementation_bwd=-1,
                  keep_input=False, adapter=None):
         super(SubModuleStack, self).__init__()
+        fn = create_coupling(Fm=Gm, Gm=Gm, coupling=coupling, implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd, adapter=adapter)
         self.stack = torch.nn.Sequential(
-            *[ReversibleBlock(Gm, Gm, coupling=coupling, implementation_fwd=implementation_fwd,
-                                    implementation_bwd=implementation_bwd, adapter=adapter,
-                                    keep_input=keep_input) for _ in range(depth)]
+            *[ReversibleModule(fn=fn, keep_input=keep_input) for _ in range(depth)]
         )
 
     def forward(self, x):
@@ -45,29 +45,37 @@ def is_memory_cleared(var, isclear, shape):
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-def test_reversible_block_additive_notimplemented(coupling):
+def test_reversible_block_notimplemented(coupling):
     fm = torch.nn.Conv2d(10, 10, (3, 3), padding=1)
     X = torch.zeros(1, 20, 10, 10)
     with pytest.raises(NotImplementedError):
-        f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=0, implementation_fwd=-2,
-                                  adapter=AffineAdapterNaive)
-        f.forward(X)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=DeprecationWarning)
+            f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=0, implementation_fwd=-2,
+                                      adapter=AffineAdapterNaive)
+            assert isinstance(f, ReversibleModule)
+            f.forward(X)
     with pytest.raises(NotImplementedError):
-        f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=-2, implementation_fwd=0,
-                                  adapter=AffineAdapterNaive)
-        f.inverse(X)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=DeprecationWarning)
+            f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=-2, implementation_fwd=0,
+                                      adapter=AffineAdapterNaive)
+            assert isinstance(f, ReversibleModule)
+            f.inverse(X)
     with pytest.raises(NotImplementedError):
-        ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
-                              adapter=AffineAdapterNaive)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=DeprecationWarning)
+            ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
+                                  adapter=AffineAdapterNaive)
 
 
-@pytest.mark.parametrize('coupling,adapter', [('additive', None),])
-                                              # ('affine', AffineAdapterNaive),
-                                              # ('affine', AffineAdapterSigmoid)])
+@pytest.mark.parametrize('coupling,adapter', [('additive', None),
+                                              ('affine', AffineAdapterNaive),
+                                              ('affine', AffineAdapterSigmoid)])
 @pytest.mark.parametrize('bwd', [False, True])
 @pytest.mark.parametrize('keep_input', [False, True])
 @pytest.mark.parametrize('keep_input_inverse', [False, True])
-def test_reversible_block_fwd_bwd(coupling, adapter, bwd, keep_input, keep_input_inverse):
+def test_reversible_module_fwd_bwd(coupling, adapter, bwd, keep_input, keep_input_inverse):
     """ReversibleBlock test of the memory saving forward and backward passes
 
     * test inversion Y = RB(X) and X = RB.inverse(Y)
@@ -83,15 +91,6 @@ def test_reversible_block_fwd_bwd(coupling, adapter, bwd, keep_input, keep_input
         target_data = torch.rand(*dims, dtype=torch.float32)
         Gm = SubModule(in_filters=5, out_filters=5 if coupling == 'additive' or adapter is AffineAdapterNaive else 10)
         s_grad = [p.data.numpy().copy() for p in Gm.parameters()]
-        # for bwd in [False, True]:
-        #     impl_out, impl_grad = [], []
-        #     for keep_input in [False, True]:
-        #         for keep_input_inverse in [False, True]:
-        #             for implementation_fwd in [-1]: #, 0, 1]:
-        #                 for implementation_bwd in [-1]: #, 0, 1]:
-                            # keep_input = keep_input_sub or implementation_fwd == -1
-                            # keep_input_inverse = keep_input_inverse_sub or implementation_bwd == -1
-                            # print(bwd, coupling, keep_input, keep_input_inverse, implementation_fwd, implementation_bwd)
         # test with zero padded convolution
         with torch.set_grad_enabled(True):
             X = data.clone().requires_grad_()
@@ -102,9 +101,10 @@ def test_reversible_block_fwd_bwd(coupling, adapter, bwd, keep_input, keep_input
 
             Gm2 = copy.deepcopy(Gm)
             Gm3 = copy.deepcopy(Gm)
-            rb = ReversibleBlock(Gm2, Gm3, coupling=coupling, implementation_fwd=-1,
-                                           implementation_bwd=-1, adapter=adapter,
-                                           keep_input=keep_input, keep_input_inverse=keep_input_inverse)
+            fn = create_coupling(Fm=Gm2, Gm=Gm3, coupling=coupling, implementation_fwd=-1,
+                                 implementation_bwd=-1, adapter=adapter)
+            rb = ReversibleModule(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input_inverse)
+
             rb.train()
             rb.zero_grad()
 
@@ -142,26 +142,18 @@ def test_reversible_block_fwd_bwd(coupling, adapter, bwd, keep_input, keep_input
             assert X.detach().numpy().shape == data.shape
             assert np.allclose(X.detach().numpy(), data, atol=1e-06)
             assert np.allclose(X.detach().numpy(), Xinv.detach().numpy(), atol=1e-05)  # Model is now trained and will differ
-            # impl_out.append(Y.detach().numpy().copy())
-            # impl_grad.append()
             grads = [p.detach().numpy().copy() for p in Gm2.parameters()]
 
             assert not np.allclose(grads[0], s_grad[0])
-
-# output and gradients similar over all implementations?
-# for i in range(0, len(impl_grad) - 1, 1):
-#     assert np.allclose(impl_grad[i][0], impl_grad[i + 1][0])
-#     assert np.allclose(impl_out[i], impl_out[i + 1])
 
 
 @pytest.mark.parametrize('coupling,adapter', [('additive', None),
                                               ('affine', AffineAdapterNaive),
                                               ('affine', AffineAdapterSigmoid)])
-def test_revblock_chained(coupling, adapter):
+def test_reversible_module_chained(coupling, adapter):
     set_seeds(42)
     dims = (2, 10, 8, 8)
     data = torch.rand(*dims, dtype=torch.float32)
-        # np.random.random(dims).astype(np.float32)
     target_data = torch.rand(*dims, dtype=torch.float32)
     with torch.set_grad_enabled(True):
         X = data.clone().requires_grad_()
@@ -192,35 +184,33 @@ def test_revblock_chained(coupling, adapter):
 def test_reversible_module_disabled_versus_enabled(inverted):
     set_seeds(42)
     Gm = SubModule(in_filters=5, out_filters=5)
-    rb = ReversibleBlock(Gm, Gm, coupling='additive', implementation_fwd=-1,
-                                  implementation_bwd=-1, adapter=None,
-                                  keep_input=False)
 
-    rb2 = ReversibleBlock(Gm, Gm, coupling='additive', implementation_fwd=-1,
-                                  implementation_bwd=-1, adapter=None,
-                                  keep_input=False)
-
-    assert isinstance(rb, ReversibleModule)
-    assert isinstance(rb2, ReversibleModule)
+    coupling_fn = create_coupling(Fm=Gm, Gm=Gm, coupling='additive', implementation_fwd=-1,
+                                  implementation_bwd=-1)
+    rb = ReversibleModule(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
+    rb2 = ReversibleModule(fn=copy.deepcopy(coupling_fn), keep_input=False, keep_input_inverse=False)
+    rb.eval()
+    rb2.eval()
     rb2.disable = True
-    dims = (2, 10, 8, 8)
-    data = torch.rand(*dims, dtype=torch.float32)
-    X, X2 = data.clone().requires_grad_(), data.clone().requires_grad_()
-    if not inverted:
-        Y = rb(X)
-        Y2 = rb2(X2)
-    else:
-        Y = rb.inverse(X)
-        Y2 = rb2.inverse(X2)
+    with torch.no_grad():
+        dims = (2, 10, 8, 8)
+        data = torch.rand(*dims, dtype=torch.float32)
+        X, X2 = data.clone().detach().requires_grad_(), data.clone().detach().requires_grad_()
+        if not inverted:
+            Y = rb(X)
+            Y2 = rb2(X2)
+        else:
+            Y = rb.inverse(X)
+            Y2 = rb2.inverse(X2)
 
-    assert torch.allclose(Y, Y2)
+        assert torch.allclose(Y, Y2)
 
-    assert is_memory_cleared(X, True, dims)
-    assert is_memory_cleared(X2, False, dims)
+        assert is_memory_cleared(X, True, dims)
+        assert is_memory_cleared(X2, False, dims)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-def test_revblock_simple_inverse(coupling):
+def test_reversible_module_simple_inverse(coupling):
     """ReversibleBlock inverse test
 
     * test inversion Y = RB(X) and X = RB.inverse(Y)
@@ -228,30 +218,26 @@ def test_revblock_simple_inverse(coupling):
     """
     for seed in range(10):
         set_seeds(seed)
-        for implementation_fwd in [-1]: #, 0, 1]:
-            for implementation_bwd in [-1]: #, 0, 1]:
-                # define some data
-                X = torch.rand(2, 4, 5, 5).requires_grad_()
+        # define some data
+        X = torch.rand(2, 4, 5, 5).requires_grad_()
 
-                # define an arbitrary reversible function
-                fn = ReversibleBlock(torch.nn.Conv2d(2, 2, 3, padding=1), keep_input=False, coupling=coupling,
-                                           implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd,
-                                           adapter=AffineAdapterNaive)
+        # define an arbitrary reversible function
+        coupling_fn = create_coupling(Fm=torch.nn.Conv2d(2, 2, 3, padding=1), coupling=coupling, implementation_fwd=-1,
+                                      implementation_bwd=-1, adapter=AffineAdapterNaive)
+        fn = ReversibleModule(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
 
-                # compute output
-                Y = fn.forward(X.clone())
+        # compute output
+        Y = fn.forward(X.clone())
 
-                # compute input from output
-                X2 = fn.inverse(Y)
+        # compute input from output
+        X2 = fn.inverse(Y)
 
-                # check that the inverted output and the original input are approximately similar
-                assert np.allclose(X2.detach().numpy(), X.detach().numpy(), atol=1e-06)
+        # check that the inverted output and the original input are approximately similar
+        assert np.allclose(X2.detach().numpy(), X.detach().numpy(), atol=1e-06)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-@pytest.mark.parametrize('implementation_fwd', [-1]) #, 0, 1])
-@pytest.mark.parametrize('implementation_bwd', [-1]) #, 0, 1])
-def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
+def test_normal_vs_reversible_module(coupling):
     """ReversibleBlock test if similar gradients and weights results are obtained after similar training
 
     * test training the block for a single step and compare weights and grads for implementations: 0, 1
@@ -285,8 +271,10 @@ def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
 
         # define an arbitrary reversible function and define graph for model 1
         Xin = X.clone().requires_grad_()
-        fn = ReversibleBlock(c1_2, c2_2, keep_input=False, coupling=coupling, adapter=AffineAdapterNaive,
-                                   implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
+        coupling_fn = create_coupling(Fm=c1_2, Gm=c2_2, coupling=coupling, implementation_fwd=-1,
+                                      implementation_bwd=-1, adapter=AffineAdapterNaive)
+        fn = ReversibleModule(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
+
         Y = fn.forward(Xin)
         loss2 = torch.mean(Y)
 

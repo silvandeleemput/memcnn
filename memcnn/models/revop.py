@@ -14,14 +14,11 @@ warnings.filterwarnings(action='ignore', category=UserWarning)
 
 def signal_hook(grad_output, rev_block, direction):
     state = rev_block._bwd_state[direction] == 0
-    # print("SIGNAL {} {}".format(direction, state))
     rev_block._bwd_state[direction] = 1 if state else 0
 
 
 def backward_hook(grad_output, keep_input, rev_block, compute_input_fn, compute_output_fn, direction, input_tensor, output_tensor):
-    # print("BW hook runs {} {} {} {} {} {}".format(direction, grad_output.shape, keep_input, None, compute_input_fn.__name__, compute_output_fn.__name__))
     perform_action = rev_block._bwd_state[direction] == 0
-    # print("HOOK {} {} in:{} out:{}".format(direction, perform_action, input_tensor.storage().size(), output_tensor.storage().size()))
     rev_block._bwd_state[direction] = 1 if perform_action else 0
     if perform_action:
         # restore input
@@ -233,12 +230,19 @@ class ReversibleBlock(ReversibleModule):
 
         """
         warnings.warn("This class has been deprecated. Use the more flexible ReversibleModule class", DeprecationWarning)
-        if coupling == 'additive':
-            fn = AdditiveBlock(Fm, Gm,
-                               implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
-        elif coupling == 'affine':
-            fn = AffineBlock(Fm, Gm, adapter=adapter,
-                             implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
-        else:
-            raise NotImplementedError('Unknown coupling method: %s' % coupling)
+        fn = create_coupling(Fm=Fm, Gm=Gm, coupling=coupling,
+                             implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd,
+                             adapter=adapter)
         super(ReversibleBlock, self).__init__(fn, keep_input=keep_input, keep_input_inverse=keep_input_inverse)
+
+
+def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, implementation_bwd=-1, adapter=None):
+    if coupling == 'additive':
+        fn = AdditiveBlock(Fm, Gm,
+                           implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
+    elif coupling == 'affine':
+        fn = AffineBlock(Fm, Gm, adapter=adapter,
+                         implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
+    else:
+        raise NotImplementedError('Unknown coupling method: %s' % coupling)
+    return fn
