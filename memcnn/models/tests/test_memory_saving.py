@@ -226,7 +226,7 @@ def test_memory_saving(device, coupling, keep_input):
     with torch.set_grad_enabled(True):
         dims = [2, 10, 10, 10]
         depth = 5
-        memuse = float(np.prod(dims + [depth, 4, ])) / float(1024 ** 2)
+
         xx = torch.rand(*dims, device=device, dtype=torch.float32).requires_grad_()
         ytarget = torch.rand(*dims, device=device, dtype=torch.float32)
 
@@ -255,10 +255,13 @@ def test_memory_saving(device, coupling, keep_input):
         gc.enable()
 
         if device == 'cpu':
-            memuse = 0.02
-
-        if keep_input:
-            assert mem_after_forward - mem_start >= memuse
+            memuse = 0.05
         else:
-            assert mem_after_forward - mem_start < (1 if device == 'cuda' else memuse)
+            memuse = float(np.prod(dims + [depth, 4, ])) / float(1024 ** 2)
+
+        measured_memuse = mem_after_forward - mem_start
+        if keep_input:
+            assert measured_memuse >= memuse
+        else:
+            assert measured_memuse < (1 if device == 'cuda' else memuse)
         # assert math.floor(mem_after_backward - mem_start) >= 9

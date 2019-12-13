@@ -17,6 +17,7 @@ class ExampleOperation(nn.Module):
     def forward(self, x):
         return self.seq(x)
 
+
 # generate some random input data (batch_size, num_channels, y_elements, x_elements)
 X = torch.rand(2, 10, 8, 8)
 

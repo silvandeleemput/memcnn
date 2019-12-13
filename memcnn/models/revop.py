@@ -12,14 +12,15 @@ from memcnn.models.utils import pytorch_version_one_and_above
 warnings.filterwarnings(action='ignore', category=UserWarning)
 
 
-def signal_hook(grad_output, rev_block, direction):
-    state = rev_block._bwd_state[direction] == 0
-    rev_block._bwd_state[direction] = 1 if state else 0
+def signal_hook(grad_output, valid_states, state_index):
+    state = valid_states[state_index]
+    valid_states[state_index] = not state
 
 
-def backward_hook(grad_output, keep_input, rev_block, compute_input_fn, compute_output_fn, direction, input_tensor, output_tensor):
-    perform_action = rev_block._bwd_state[direction] == 0
-    rev_block._bwd_state[direction] = 1 if perform_action else 0
+def backward_hook(grad_output, keep_input, compute_input_fn, compute_output_fn,
+                  input_tensor, output_tensor, valid_states, state_index):
+    perform_action = valid_states[state_index]
+    valid_states[state_index] = not perform_action
     if perform_action:
         # restore input
         if not keep_input:
@@ -83,7 +84,8 @@ class ReversibleModule(nn.Module):
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
         self._fn = fn
-        self._bwd_state = {"forward":0, "inverse":0}
+        self._valid_states = []
+        self._state_counter = 0
 
 
     def forward(self, xin):
@@ -114,10 +116,13 @@ class ReversibleModule(nn.Module):
                     # PyTorch 1.0+ way to clear storage
                     input_tensor.storage().resize_(0)
             if self.training:
-                xin.register_hook(hook=partial(signal_hook, rev_block=self, direction="forward"))
-                y.register_hook(hook=partial(backward_hook, keep_input=self.keep_input, rev_block=self,
+                self._valid_states.append(True)
+                xin.register_hook(hook=partial(signal_hook, valid_states=self._valid_states, state_index=self._state_counter))
+                y.register_hook(hook=partial(backward_hook, keep_input=self.keep_input,
                                              compute_input_fn=self._fn.inverse, compute_output_fn=self._fn.forward,
-                                             direction="forward", input_tensor=input_tensor, output_tensor=output_tensor))
+                                             valid_states=self._valid_states, state_index=self._state_counter,
+                                             input_tensor=input_tensor, output_tensor=output_tensor))
+                self._state_counter += 1
 
             y.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
             y.requires_grad = self.training
@@ -153,10 +158,13 @@ class ReversibleModule(nn.Module):
                     # PyTorch 1.0+ way to clear storage
                     input_tensor.storage().resize_(0)
             if self.training:
-                yin.register_hook(hook=partial(signal_hook, rev_block=self, direction="inverse"))
-                x.register_hook(hook=partial(backward_hook, keep_input=self.keep_input_inverse, rev_block=self,
+                self._valid_states.append(True)
+                yin.register_hook(hook=partial(signal_hook, valid_states=self._valid_states, state_index=self._state_counter))
+                x.register_hook(hook=partial(backward_hook, keep_input=self.keep_input_inverse,
                                              compute_input_fn=self._fn.forward, compute_output_fn=self._fn.inverse,
-                                             direction="inverse", input_tensor=input_tensor, output_tensor=output_tensor))
+                                             valid_states=self._valid_states, state_index=self._state_counter,
+                                             input_tensor=input_tensor, output_tensor=output_tensor))
+                self._state_counter += 1
             x.detach_()  # Detaches x in-place (inbetween computations can now be discarded)
             x.requires_grad = self.training
         else:
@@ -246,3 +254,11 @@ def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, imp
     else:
         raise NotImplementedError('Unknown coupling method: %s' % coupling)
     return fn
+
+
+def is_invertible_module(module_in, test_input, atol=1e-6):
+    test_input = torch.rand(test_input.shape, dtype=test_input.dtype)
+    if not hasattr(module_in, "inverse"):
+        return False
+    with torch.no_grad():
+        return torch.allclose(module_in.inverse(module_in(test_input)), test_input, atol=atol)

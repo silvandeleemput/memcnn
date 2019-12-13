@@ -62,15 +62,27 @@ def test_run_experiment(tmp_path):
     run_experiment(**run_params)
 
 
-def test_train_revnet164_with_memory_saving(tmp_path):
-    exptags = ['cifar10', 'revnet164', 'epoch1']
+@pytest.mark.parametrize("network", [
+    'resnet32',
+     pytest.param('resnet110', marks=pytest.mark.skipif(condition="CIRCLECI" in os.environ, reason="Too memory intensive for CI")),
+     pytest.param('resnet164', marks=pytest.mark.skipif(condition="CIRCLECI" in os.environ, reason="Too memory intensive for CI")),
+    'revnet38',
+    'revnet110',
+     pytest.param('revnet164', marks=pytest.mark.skipif(condition="CIRCLECI" in os.environ, reason="Too memory intensive for CI"))
+])
+@pytest.mark.parametrize("use_cuda", [
+    False,
+    pytest.param(True, marks=pytest.mark.skipif(condition=not torch.cuda.is_available(), reason="No GPU available"))
+])
+def test_train_networks(tmp_path, network, use_cuda):
+    exptags = ['cifar10', network, 'epoch1']
     exp_file = str(Path(__file__).parent / "resources" / "experiments.json")
     data_dir = str(tmp_path / "tmpdata")
     results_dir = str(tmp_path / "resdir")
     os.makedirs(data_dir)
     os.makedirs(results_dir)
     run_experiment(experiment_tags=exptags, data_dir=data_dir, results_dir=results_dir,
-                   start_fresh=True, use_cuda=False, workers=None, experiments_file=exp_file,
+                   start_fresh=True, use_cuda=use_cuda, workers=None, experiments_file=exp_file,
                    disp_iter=1,
                    save_iter=1,
                    valid_iter=1,)

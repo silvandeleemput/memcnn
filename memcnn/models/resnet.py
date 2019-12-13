@@ -15,7 +15,7 @@ Author: Sil van de Leemput
 """
 import torch.nn as nn
 import math
-from memcnn.models.revop import ReversibleBlock
+from memcnn.models.revop import ReversibleModule, create_coupling
 
 __all__ = ['ResNet', 'BasicBlock', 'Bottleneck', 'RevBasicBlock', 'RevBottleneck', 'BasicBlockSub', 'BottleneckSub',
            'conv3x3', 'batch_norm']
@@ -75,7 +75,8 @@ class RevBasicBlock(nn.Module):
         if downsample is None and stride == 1:
             gm = BasicBlockSub(inplanes // 2, planes // 2, stride, noactivation)
             fm = BasicBlockSub(inplanes // 2, planes // 2, stride, noactivation)
-            self.revblock = ReversibleBlock(gm, fm)
+            coupling = create_coupling(Fm=fm, Gm=gm, coupling='additive')
+            self.revblock = ReversibleModule(fn=coupling, keep_input=False)
         else:
             self.basicblock_sub = BasicBlockSub(inplanes, planes, stride, noactivation)
         self.downsample = downsample
@@ -99,7 +100,8 @@ class RevBottleneck(nn.Module):
         if downsample is None and stride == 1:
             gm = BottleneckSub(inplanes // 2, planes // 2, stride, noactivation)
             fm = BottleneckSub(inplanes // 2, planes // 2, stride, noactivation)
-            self.revblock = ReversibleBlock(gm, fm)
+            coupling = create_coupling(Fm=fm, Gm=gm, coupling='additive')
+            self.revblock = ReversibleModule(fn=coupling, keep_input=False)
         else:
             self.bottleneck_sub = BottleneckSub(inplanes, planes, stride, noactivation)
         self.downsample = downsample
@@ -185,7 +187,7 @@ class ResNet(nn.Module):
                                stride=strides[0], padding=(init_kernel_size - 1) // 2,
                                bias=False)
         self.bn1 = batch_norm(self.inplanes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=False)
         if self.init_max_pool:
             self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, channels_per_layer[1], layers[0], stride=strides[1], noactivation=True)
@@ -213,7 +215,7 @@ class ResNet(nn.Module):
     def configure(self):
         """Initialization specific configuration settings"""
         for m in self.modules():
-            if isinstance(m, ReversibleBlock):
+            if isinstance(m, ReversibleModule):
                 m.implementation = self.implementation
             elif isinstance(m, nn.BatchNorm2d):
                 if self.batch_norm_fix:

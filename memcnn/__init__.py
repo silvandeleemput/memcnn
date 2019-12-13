@@ -7,10 +7,11 @@ __email__ = 'silvandeleemput@gmail.com'
 __version__ = '1.0.1'
 
 
-from memcnn.models.revop import ReversibleBlock, ReversibleModule, create_coupling
+from memcnn.models.revop import ReversibleBlock, ReversibleModule, create_coupling, is_invertible_module
 
 __all__ = [
     'ReversibleBlock',
     'ReversibleModule',
-    'create_coupling'
+    'create_coupling',
+    'is_invertible_module'
 ]
