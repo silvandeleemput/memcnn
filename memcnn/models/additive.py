@@ -1,3 +1,4 @@
+import warnings
 import torch
 import torch.nn as nn
 import copy
@@ -5,12 +6,8 @@ from torch import set_grad_enabled
 import numpy as np
 
 
-class NonMemorySavingWarning(UserWarning):
-    pass
-
-
-class AdditiveBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation_fwd=1, implementation_bwd=1):
+class AdditiveCoupling(nn.Module):
+    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1):
         """The AdditiveBlock
 
         Parameters
@@ -29,7 +26,7 @@ class AdditiveBlock(nn.Module):
                 Switch between different Additive Operation implementations for inverse pass. Default = 1
 
         """
-        super(AdditiveBlock, self).__init__()
+        super(AdditiveCoupling, self).__init__()
         # mirror the passed module, without parameter sharing...
         if Gm is None:
             Gm = copy.deepcopy(Fm)
@@ -79,6 +76,15 @@ class AdditiveBlock(nn.Module):
                                       .format(self.implementation_bwd))
 
         return x
+
+
+class AdditiveBlock(AdditiveCoupling):
+    def __init__(self, Fm, Gm=None, implementation_fwd=1, implementation_bwd=1):
+        warnings.warn("This class has been deprecated. Use the AdditiveCoupling class instead.",
+                      DeprecationWarning)
+        super(AdditiveBlock, self).__init__(Fm=Fm, Gm=Gm,
+                                            implementation_fwd=implementation_fwd,
+                                            implementation_bwd=implementation_bwd)
 
 
 class AdditiveBlockFunction(torch.autograd.Function):

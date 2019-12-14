@@ -4,8 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import warnings
-from memcnn.models.additive import AdditiveBlock
-from memcnn.models.affine import AffineBlock
+from memcnn.models.additive import AdditiveCoupling
+from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
 
 
@@ -246,11 +246,11 @@ class ReversibleBlock(ReversibleModule):
 
 def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, implementation_bwd=-1, adapter=None):
     if coupling == 'additive':
-        fn = AdditiveBlock(Fm, Gm,
-                           implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
+        fn = AdditiveCoupling(Fm, Gm,
+                              implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
     elif coupling == 'affine':
-        fn = AffineBlock(Fm, Gm, adapter=adapter,
-                         implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
+        fn = AffineCoupling(Fm, Gm, adapter=adapter,
+                            implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
     else:
         raise NotImplementedError('Unknown coupling method: %s' % coupling)
     return fn

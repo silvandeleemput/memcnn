@@ -5,10 +5,10 @@ import torch
 import torch.nn
 import numpy as np
 import copy
-from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid, AffineBlock
+from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid, AffineCoupling
 from memcnn import ReversibleBlock
 from memcnn.models.revop import ReversibleModule, create_coupling, is_invertible_module
-from memcnn.models.additive import AdditiveBlock
+from memcnn.models.additive import AdditiveCoupling
 
 
 def set_seeds(seed):
@@ -60,7 +60,7 @@ def is_memory_cleared(var, isclear, shape):
 def test_is_invertible_module():
     X = torch.zeros(1, 10, 10, 10)
     assert not is_invertible_module(torch.nn.Conv2d(10, 10, kernel_size=(1, 1)), X)
-    fn = AdditiveBlock(SubModule(),implementation_bwd=-1, implementation_fwd=-1)
+    fn = AdditiveCoupling(SubModule(), implementation_bwd=-1, implementation_fwd=-1)
     assert is_invertible_module(fn, X)
     class FakeInverse(torch.nn.Module):
         def forward(self, x):
@@ -146,9 +146,9 @@ def test_input_output_invertible_function_share_tensor():
 
 
 @pytest.mark.parametrize('fn', [
-    AdditiveBlock(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1),
-    AffineBlock(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterNaive),
-    AffineBlock(Fm=SubModule(out_filters=10), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterSigmoid),
+    AdditiveCoupling(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1),
+    AffineCoupling(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterNaive),
+    AffineCoupling(Fm=SubModule(out_filters=10), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterSigmoid),
     MultiplicationInverse()
 ])
 @pytest.mark.parametrize('bwd', [False, True])

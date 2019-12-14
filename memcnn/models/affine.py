@@ -41,8 +41,8 @@ class AffineAdapterSigmoid(nn.Module):
         return scale, shift
 
 
-class AffineBlock(nn.Module):
-    def __init__(self, Fm, Gm=None, adapter=None, implementation_fwd=1, implementation_bwd=1):
+class AffineCoupling(nn.Module):
+    def __init__(self, Fm, Gm=None, adapter=None, implementation_fwd=-1, implementation_bwd=-1):
         """The AffineBlock
 
         Parameters
@@ -60,13 +60,13 @@ class AffineBlock(nn.Module):
                 s, t are respectively the scale and shift tensors for the affine coupling.
 
             implementation_fwd : int
-                Switch between different Affine Operation implementations for forward pass. Default = 1
+                Switch between different Affine Operation implementations for forward pass. Default = -1
 
             implementation_bwd : int
-                Switch between different Affine Operation implementations for inverse pass. Default = 1
+                Switch between different Affine Operation implementations for inverse pass. Default = -1
 
         """
-        super(AffineBlock, self).__init__()
+        super(AffineCoupling, self).__init__()
         # mirror the passed module, without parameter sharing...
         if Gm is None:
             Gm = copy.deepcopy(Fm)
@@ -117,6 +117,15 @@ class AffineBlock(nn.Module):
                                       .format(self.implementation_bwd))
 
         return x
+
+
+class AffineBlock(AffineCoupling):
+    def __init__(self, Fm, Gm=None, implementation_fwd=1, implementation_bwd=1):
+        warnings.warn("This class has been deprecated. Use the AffineCoupling class instead.",
+                      DeprecationWarning)
+        super(AffineBlock, self).__init__(Fm=Fm, Gm=Gm,
+                                          implementation_fwd=implementation_fwd,
+                                          implementation_bwd=implementation_bwd)
 
 
 class AffineBlockFunction(torch.autograd.Function):
