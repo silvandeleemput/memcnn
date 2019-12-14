@@ -63,12 +63,12 @@ def test_run_experiment(tmp_path):
 
 
 @pytest.mark.parametrize("network", [
-    pytest.param('resnet32', marks=pytest.mark.skipif(condition="CIRCLE_JOB" in os.environ, reason="Too memory intensive for CI")),
-    pytest.param('resnet110', marks=pytest.mark.skipif(condition="CIRCLE_JOB" in os.environ, reason="Too memory intensive for CI")),
-    pytest.param('resnet164', marks=pytest.mark.skipif(condition="CIRCLE_JOB" in os.environ, reason="Too memory intensive for CI")),
-    pytest.param('revnet38', marks=pytest.mark.skipif(condition="CIRCLE_JOB" in os.environ, reason="Too memory intensive for CI")),
-    pytest.param('revnet110', marks=pytest.mark.skipif(condition="CIRCLE_JOB" in os.environ, reason="Too memory intensive for CI")),
-    pytest.param('revnet164', marks=pytest.mark.skipif(condition="CIRCLE_JOB" in os.environ, reason="Too memory intensive for CI"))
+    pytest.param('resnet32', marks=pytest.mark.skipif(condition=True, reason="Too memory intensive for CI")),
+    pytest.param('resnet110', marks=pytest.mark.skipif(condition=True, reason="Too memory intensive for CI")),
+    pytest.param('resnet164', marks=pytest.mark.skipif(condition=True, reason="Too memory intensive for CI")),
+    pytest.param('revnet38', marks=pytest.mark.skipif(condition=True, reason="Too memory intensive for CI")),
+    pytest.param('revnet110', marks=pytest.mark.skipif(condition=True, reason="Too memory intensive for CI")),
+    pytest.param('revnet164', marks=pytest.mark.skipif(condition=True, reason="Too memory intensive for CI"))
 ])
 @pytest.mark.parametrize("use_cuda", [
     False,
