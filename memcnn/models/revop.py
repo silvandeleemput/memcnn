@@ -261,4 +261,10 @@ def is_invertible_module(module_in, test_input, atol=1e-6):
     if not hasattr(module_in, "inverse"):
         return False
     with torch.no_grad():
-        return torch.allclose(module_in.inverse(module_in(test_input)), test_input, atol=atol)
+        if not torch.allclose(module_in.inverse(module_in(test_input)), test_input, atol=atol):
+            return False
+        if test_input is module_in(test_input):
+            return False
+        if test_input is module_in.inverse(test_input):
+            return False
+    return True

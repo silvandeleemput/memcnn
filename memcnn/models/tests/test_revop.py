@@ -108,6 +108,43 @@ class MultiplicationInverse(torch.nn.Module):
         return y / self.factor
 
 
+class IdentityInverse(torch.nn.Module):
+    def __init__(self, multiply_forward=False, multiply_inverse=False):
+        super(IdentityInverse, self).__init__()
+        self.factor = torch.nn.Parameter(torch.ones(1))
+        self.multiply_forward = multiply_forward
+        self.multiply_inverse = multiply_inverse
+
+    def forward(self, x):
+        if self.multiply_forward:
+            return x * self.factor
+        else:
+            return x
+
+    def inverse(self, y):
+        if self.multiply_inverse:
+            return y * self.factor
+        else:
+            return y
+
+
+def test_input_output_invertible_function_share_tensor():
+    fn = IdentityInverse()
+    rm = ReversibleModule(fn=fn, keep_input=True, keep_input_inverse=True)
+    X = torch.rand(1, 2, 5, 5, dtype=torch.float32).requires_grad_()
+    assert not is_invertible_module(fn, X, atol=1e-6)
+    with pytest.raises(RuntimeError):
+        rm.forward(X)
+    fn.multiply_forward = True
+    rm.forward(X)
+    assert not is_invertible_module(fn, X, atol=1e-6)
+    with pytest.raises(RuntimeError):
+        rm.inverse(X)
+    fn.multiply_inverse = True
+    rm.inverse(X)
+    assert is_invertible_module(fn, X, atol=1e-6)
+
+
 @pytest.mark.parametrize('fn', [
     AdditiveBlock(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1),
     AffineBlock(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterNaive),
