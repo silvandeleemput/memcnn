@@ -12,13 +12,13 @@ from memcnn.models.utils import pytorch_version_one_and_above
 warnings.filterwarnings(action='ignore', category=UserWarning)
 
 
-def signal_hook(grad_output, valid_states, state_index):
+def signal_hook(grad_output, valid_states, state_index):  # pragma: no cover
     state = valid_states[state_index]
     valid_states[state_index] = not state
 
 
 def backward_hook(grad_output, keep_input, compute_input_fn, compute_output_fn,
-                  input_tensor, output_tensor, valid_states, state_index):
+                  input_tensor, output_tensor, valid_states, state_index):  # pragma: no cover
     perform_action = valid_states[state_index]
     valid_states[state_index] = not perform_action
     if perform_action:
