@@ -225,7 +225,6 @@ def test_chained_reversible_module_multiple_forward_and_inverse_train_passes():
     optim = torch.optim.SGD(rb_temp.parameters(), lr=0.01)
 
     initial_params = [p.detach().clone() for p in rb_temp.parameters()]
-    initial_buffers = [b.detach().clone() for b in rb_temp.buffers()]
     initial_state = copy.deepcopy(rb_temp.state_dict())
     initial_optim_state = copy.deepcopy(optim.state_dict())
 
@@ -246,8 +245,6 @@ def test_chained_reversible_module_multiple_forward_and_inverse_train_passes():
         with torch.no_grad():
             for (name, p), p_initial in zip(rb.named_parameters(), initial_params):
                 p.set_(p_initial)
-            for (name, b), b_initial in zip(rb.named_buffers(), initial_buffers):
-                b.set_(b_initial)
 
         rb.load_state_dict(initial_state)
         optim = torch.optim.SGD(rb_temp.parameters(), lr=0.01)
