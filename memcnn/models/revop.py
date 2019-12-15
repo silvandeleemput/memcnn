@@ -38,9 +38,11 @@ def backward_hook(grad_output, keep_input, compute_input_fn, compute_output_fn,
             temp_output.backward(gradient=grad_output)
 
 
-class ReversibleModule(nn.Module):
+class InvertibleModuleWrapper(nn.Module):
     def __init__(self, fn, keep_input=False, keep_input_inverse=False, disable=False):
-        """The ReversibleModule
+        """
+        The InvertibleModuleWrapper which enables memory savings during training by exploiting
+        the invertible properties of the wrapped module.
 
         Parameters
         ----------
@@ -77,7 +79,7 @@ class ReversibleModule(nn.Module):
             If an unknown coupling or implementation is given.
 
         """
-        super(ReversibleModule, self).__init__()
+        super(InvertibleModuleWrapper, self).__init__()
         self.disable = disable
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
@@ -170,7 +172,7 @@ class ReversibleModule(nn.Module):
         return x
 
 
-class ReversibleBlock(ReversibleModule):
+class ReversibleBlock(InvertibleModuleWrapper):
     def __init__(self, Fm, Gm=None, coupling='additive', keep_input=False, keep_input_inverse=False,
                  implementation_fwd=-1, implementation_bwd=-1, adapter=None):
         """The ReversibleBlock
@@ -235,7 +237,7 @@ class ReversibleBlock(ReversibleModule):
             If an unknown coupling or implementation is given.
 
         """
-        warnings.warn("This class has been deprecated. Use the more flexible ReversibleModule class", DeprecationWarning)
+        warnings.warn("This class has been deprecated. Use the more flexible InvertibleModuleWrapper class", DeprecationWarning)
         fn = create_coupling(Fm=Fm, Gm=Gm, coupling=coupling,
                              implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd,
                              adapter=adapter)
@@ -254,8 +256,8 @@ def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, imp
     return fn
 
 
-def is_invertible_module(module_in, test_input, atol=1e-6):
-    test_input = torch.rand(test_input.shape, dtype=test_input.dtype)
+def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.float32, atol=1e-6):
+    test_input = torch.rand(test_input_shape, dtype=test_input_dtype)
     if not hasattr(module_in, "inverse"):
         return False
     with torch.no_grad():

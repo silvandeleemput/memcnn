@@ -4,7 +4,7 @@ import pytest
 import copy
 import warnings
 
-from memcnn import create_coupling, ReversibleModule
+from memcnn import create_coupling, InvertibleModuleWrapper
 from memcnn.models.tests.test_revop import set_seeds, SubModule
 from memcnn.models.affine import AffineAdapterNaive, AffineBlock
 from memcnn.models.additive import AdditiveBlock
@@ -14,13 +14,7 @@ from memcnn.models.additive import AdditiveBlock
 @pytest.mark.parametrize('bwd', [False, True])
 @pytest.mark.parametrize('implementation', [-1, 0, 1])
 def test_coupling_implementations_against_reference(coupling, bwd, implementation):
-    """Test if similar gradients and weights results are obtained after similar training for the couplings
-
-    * test training the block for a single step and compare weights and grads for implementations: 0, 1
-    * test against normal non Reversible Block function
-    * test if recreated input and produced output are contiguous
-
-    """
+    """Test if similar gradients and weights results are obtained after similar training for the couplings"""
     with warnings.catch_warnings():
         warnings.simplefilter(action='ignore', category=DeprecationWarning)
         for seed in range(10):
@@ -96,13 +90,13 @@ def test_coupling_implementations_against_reference(coupling, bwd, implementatio
             assert torch.allclose(c1.bias.grad.detach(), c1_2.bias.grad.detach())
             assert torch.allclose(c2.bias.grad.detach(), c2_2.bias.grad.detach())
 
-            fn = ReversibleModule(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
+            fn = InvertibleModuleWrapper(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
             Yout = fn.inverse(XX) if bwd else fn.forward(XX)
             loss = torch.mean(Yout)
             loss.backward()
             assert XX.storage().size() > 0
 
-            fn2 = ReversibleModule(fn=coupling_fn2, keep_input=False, keep_input_inverse=False)
+            fn2 = InvertibleModuleWrapper(fn=coupling_fn2, keep_input=False, keep_input_inverse=False)
             Yout2 = fn2.inverse(XX2) if bwd else fn2.forward(XX2)
             loss = torch.mean(Yout2)
             loss.backward()

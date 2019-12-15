@@ -55,14 +55,17 @@ A `PyTorch <http://pytorch.org/>`__ framework for developing memory-efficient in
 Features
 --------
 
-* Simple `ReversibleBlock` wrapper class to wrap and convert arbitrary PyTorch Modules into invertible versions.
-* Simple switching between `additive` and `affine` invertible coupling schemes and different implementations.
-* Simple toggling of memory saving by setting the `keep_input` property of the `ReversibleBlock`.
+* Enable memory savings during training by wrapping arbitrary invertible PyTorch functions with the `InvertibleModuleWrapper` class.
+* Simple toggling of memory saving by setting the `keep_input` property of the `InvertibleModuleWrapper`.
+* Turn arbitrary non-linear PyTorch functions into invertible versions using the `AdditiveCoupling` or the `AffineCoupling` classes.
 * Training and evaluation code for reproducing RevNet experiments using MemCNN.
 * CI tests for Python v2.7 and v3.6 and torch v0.4, v1.0, and v1.1 with good code coverage.
 
-Example usage: ReversibleBlock
-------------------------------
+Examples
+--------
+
+Creating an AdditiveCoupling with memory savings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -85,20 +88,43 @@ Example usage: ReversibleBlock
         def forward(self, x):
             return self.seq(x)
 
+
     # generate some random input data (batch_size, num_channels, y_elements, x_elements)
     X = torch.rand(2, 10, 8, 8)
 
     # application of the operation(s) the normal way
     model_normal = ExampleOperation(channels=10)
+    model_normal.eval()
+
     Y = model_normal(X)
 
-    # application of the operation(s) turned invertible using the reversible block
-    F = ExampleOperation(channels=10 // 2)
-    model_invertible = memcnn.ReversibleBlock(F, coupling='additive', keep_input=True, keep_input_inverse=True)
-    Y2 = model_invertible(X)
+    # turn the ExampleOperation invertible using an additive coupling
+    invertible_module = memcnn.AdditiveCoupling(
+        Fm=ExampleOperation(channels=10 // 2),
+        Gm=ExampleOperation(channels=10 // 2)
+    )
 
-    # The input (X) can be approximated (X2) by applying the inverse method of the reversible block on Y2
-    X2 = model_invertible.inverse(Y2)
+    # test that it is actually a valid invertible module (has a valid inverse method)
+    assert memcnn.is_invertible_module(invertible_module, test_input_shape=X.shape)
+
+    # wrap our invertible_module using the InvertibleModuleWrapper and benefit from memory savings during training
+    invertible_module_wrapper = memcnn.InvertibleModuleWrapper(fn=invertible_module, keep_input=True, keep_input_inverse=True)
+
+    # by default the module is set to training, the following sets this to evaluation
+    # note that this is required to pass input tensors to the model with requires_grad=False (inference only)
+    invertible_module_wrapper.eval()
+
+    # test that the wrapped module is also a valid invertible module
+    assert memcnn.is_invertible_module(invertible_module_wrapper, test_input_shape=X.shape)
+
+    # compute the forward pass using the wrapper
+    Y2 = invertible_module_wrapper.forward(X)
+
+    # the input (X) can be approximated (X2) by applying the inverse method of the wrapper on Y2
+    X2 = invertible_module_wrapper.inverse(Y2)
+
+    # test that the input and approximation are similar
+    assert torch.allclose(X, X2, atol=1e-06)
 
 Run PyTorch Experiments
 -----------------------
@@ -189,8 +215,8 @@ Memory consumption of model training in PyTorch
 |              164       |    164                   |   1704154            |         1983786      |            6.8         |    7.9                   |   2452.8             |             432.7    |
 +------------------------+--------------------------+----------------------+----------------------+------------------------+--------------------------+----------------------+----------------------+
 
-The `ResNet` model is the conventional Risidual Network implementation in PyTorch, while
-the RevNet model uses the `Reversible Block` to achieve memory savings.
+The `ResNet` model is the conventional Residual Network implementation in PyTorch, while
+the RevNet model uses the `memcnn.InvertibleModuleWrapper` to achieve memory savings.
 
 Works using MemCNN
 ------------------

@@ -27,19 +27,30 @@ model_normal.eval()
 
 Y = model_normal(X)
 
-# application of the ExampleOperation turned invertible using an additive coupling
-F = ExampleOperation(channels=10 // 2)
-invertible_function = memcnn.create_coupling(Fm=F, coupling='additive')
+# turn the ExampleOperation invertible using an additive coupling
+invertible_module = memcnn.AdditiveCoupling(
+    Fm=ExampleOperation(channels=10 // 2),
+    Gm=ExampleOperation(channels=10 // 2)
+)
 
-# the ReversibleModule can wrap invertible functions and
-# can free memory using the invertible property during training and inference
-model_invertible = memcnn.ReversibleModule(fn=invertible_function, keep_input=True, keep_input_inverse=True)
-model_invertible.eval()  # This is required for any input tensor to the model with requires_grad=True (inference only)
-Y2 = model_invertible(X)
+# test that it is actually a valid invertible module (has a valid inverse method)
+assert memcnn.is_invertible_module(invertible_module, test_input_shape=X.shape)
 
-# The input (X) can be approximated (X2) by applying the inverse method of the reversible block on Y2
-X2 = model_invertible.inverse(Y2)
+# wrap our invertible_module using the InvertibleModuleWrapper and benefit from memory savings during training
+invertible_module_wrapper = memcnn.InvertibleModuleWrapper(fn=invertible_module, keep_input=True, keep_input_inverse=True)
+
+# by default the module is set to training, the following sets this to evaluation
+# note that this is required to pass input tensors to the model with requires_grad=False (inference only)
+invertible_module_wrapper.eval()
+
+# test that the wrapped module is also a valid invertible module
+assert memcnn.is_invertible_module(invertible_module_wrapper, test_input_shape=X.shape)
+
+# compute the forward pass using the wrapper
+Y2 = invertible_module_wrapper.forward(X)
+
+# the input (X) can be approximated (X2) by applying the inverse method of the wrapper on Y2
+X2 = invertible_module_wrapper.inverse(Y2)
+
+# test that the input and approximation are similar
 assert torch.allclose(X, X2, atol=1e-06)
-
-# Output of the reversible block is unlikely to match the normal output of F
-assert not torch.allclose(Y2, Y)

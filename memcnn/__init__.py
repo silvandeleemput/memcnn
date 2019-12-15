@@ -7,11 +7,17 @@ __email__ = 'silvandeleemput@gmail.com'
 __version__ = '1.0.1'
 
 
-from memcnn.models.revop import ReversibleBlock, ReversibleModule, create_coupling, is_invertible_module
+from memcnn.models.revop import ReversibleBlock, InvertibleModuleWrapper, create_coupling, is_invertible_module
+from memcnn.models.additive import AdditiveCoupling
+from memcnn.models.affine import AffineCoupling, AffineAdapterNaive, AffineAdapterSigmoid
 
 __all__ = [
+    'AdditiveCoupling',
+    'AffineCoupling',
+    'AffineAdapterNaive',
+    'AffineAdapterSigmoid',
+    'InvertibleModuleWrapper',
     'ReversibleBlock',
-    'ReversibleModule',
     'create_coupling',
     'is_invertible_module'
 ]

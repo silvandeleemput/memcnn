@@ -194,8 +194,8 @@ class MemReporter(object):
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
 @pytest.mark.parametrize('keep_input', [True, False])
 @pytest.mark.parametrize('device', ['cpu', 'cuda'])
-def test_memory_saving(device, coupling, keep_input):
-    """Test memory saving of the reversible block
+def test_memory_saving_invertible_model_wrapper(device, coupling, keep_input):
+    """Test memory saving of the invertible model wrapper
 
     * tests fitting a large number of images by creating a deep network requiring large
       intermediate feature maps for training

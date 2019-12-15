@@ -90,7 +90,7 @@ class AdditiveBlock(AdditiveCoupling):
 class AdditiveBlockFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, xin, Fm, Gm, *weights):
-        """Forward pass for the reversible block computes:
+        """Forward pass computes:
         {x1, x2} = x
         y1 = x1 + Fm(x2)
         y2 = x2 + Gm(y1)
@@ -98,7 +98,7 @@ class AdditiveBlockFunction(torch.autograd.Function):
 
         Parameters
         ----------
-        ctx : torch.autograd.function.RevNetFunctionBackward
+        ctx : torch.autograd.Function
             The backward pass context object
         x : TorchTensor
             Input tensor. Must have channels (2nd dimension) that can be partitioned in two equal partitions
@@ -179,7 +179,7 @@ class AdditiveBlockFunction(torch.autograd.Function):
 class AdditiveBlockInverseFunction(torch.autograd.Function):
     @staticmethod
     def forward(cty, y, Fm, Gm, *weights):
-        """Forward pass for the reversible block computes:
+        """Forward pass computes:
         {y1, y2} = y
         x2 = y2 - Gm(y1)
         x1 = y1 - Fm(x2)
@@ -187,7 +187,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
 
         Parameters
         ----------
-        cty : torch.autograd.function.RevNetInverseFunctionBackward
+        cty : torch.autograd.Function
             The backward pass context object
         y : TorchTensor
             Input tensor. Must have channels (2nd dimension) that can be partitioned in two equal partitions
@@ -271,7 +271,7 @@ class AdditiveBlockInverseFunction(torch.autograd.Function):
 class AdditiveBlockFunction2(torch.autograd.Function):
     @staticmethod
     def forward(ctx, xin, Fm, Gm, *weights):
-        """Forward pass for the reversible block computes:
+        """Forward pass computes:
         {x1, x2} = x
         y1 = x1 + Fm(x2)
         y2 = x2 + Gm(y1)
@@ -279,7 +279,7 @@ class AdditiveBlockFunction2(torch.autograd.Function):
 
         Parameters
         ----------
-        ctx : torch.autograd.function.RevNetFunctionBackward
+        ctx : torch.autograd.Function
             The backward pass context object
         x : TorchTensor
             Input tensor. Must have channels (2nd dimension) that can be partitioned in two equal partitions
@@ -381,7 +381,7 @@ class AdditiveBlockFunction2(torch.autograd.Function):
 class AdditiveBlockInverseFunction2(torch.autograd.Function):
     @staticmethod
     def forward(cty, y, Fm, Gm, *weights):
-        """Forward pass for the reversible block computes:
+        """Forward pass computes:
         {y1, y2} = y
         x2 = y2 - Gm(y1)
         x1 = y1 - Fm(x2)
@@ -389,7 +389,7 @@ class AdditiveBlockInverseFunction2(torch.autograd.Function):
 
         Parameters
         ----------
-        cty : torch.autograd.function.RevNetInverseFunctionBackward
+        cty : torch.autograd.Function
             The backward pass context object
         y : TorchTensor
             Input tensor. Must have channels (2nd dimension) that can be partitioned in two equal partitions

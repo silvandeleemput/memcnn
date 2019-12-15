@@ -15,7 +15,7 @@ Author: Sil van de Leemput
 """
 import torch.nn as nn
 import math
-from memcnn.models.revop import ReversibleModule, create_coupling
+from memcnn.models.revop import InvertibleModuleWrapper, create_coupling
 
 __all__ = ['ResNet', 'BasicBlock', 'Bottleneck', 'RevBasicBlock', 'RevBottleneck', 'BasicBlockSub', 'BottleneckSub',
            'conv3x3', 'batch_norm']
@@ -76,7 +76,7 @@ class RevBasicBlock(nn.Module):
             gm = BasicBlockSub(inplanes // 2, planes // 2, stride, noactivation)
             fm = BasicBlockSub(inplanes // 2, planes // 2, stride, noactivation)
             coupling = create_coupling(Fm=fm, Gm=gm, coupling='additive')
-            self.revblock = ReversibleModule(fn=coupling, keep_input=False)
+            self.revblock = InvertibleModuleWrapper(fn=coupling, keep_input=False)
         else:
             self.basicblock_sub = BasicBlockSub(inplanes, planes, stride, noactivation)
         self.downsample = downsample
@@ -101,7 +101,7 @@ class RevBottleneck(nn.Module):
             gm = BottleneckSub(inplanes // 2, planes // 2, stride, noactivation)
             fm = BottleneckSub(inplanes // 2, planes // 2, stride, noactivation)
             coupling = create_coupling(Fm=fm, Gm=gm, coupling='additive')
-            self.revblock = ReversibleModule(fn=coupling, keep_input=False)
+            self.revblock = InvertibleModuleWrapper(fn=coupling, keep_input=False)
         else:
             self.bottleneck_sub = BottleneckSub(inplanes, planes, stride, noactivation)
         self.downsample = downsample
@@ -215,7 +215,7 @@ class ResNet(nn.Module):
     def configure(self):
         """Initialization specific configuration settings"""
         for m in self.modules():
-            if isinstance(m, ReversibleModule):
+            if isinstance(m, InvertibleModuleWrapper):
                 m.implementation = self.implementation
             elif isinstance(m, nn.BatchNorm2d):
                 if self.batch_norm_fix:
