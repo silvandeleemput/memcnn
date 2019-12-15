@@ -5,8 +5,9 @@ import copy
 import warnings
 
 from memcnn import create_coupling, ReversibleModule
-from memcnn.models.tests.test_revop import set_seeds
-from memcnn.models.affine import AffineAdapterNaive
+from memcnn.models.tests.test_revop import set_seeds, SubModule
+from memcnn.models.affine import AffineAdapterNaive, AffineBlock
+from memcnn.models.additive import AdditiveBlock
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
@@ -106,3 +107,15 @@ def test_coupling_implementations_against_reference(coupling, bwd, implementatio
             loss = torch.mean(Yout2)
             loss.backward()
             assert XX2.storage().size() > 0
+
+
+def test_legacy_additive_coupling():
+    with warnings.catch_warnings():
+        warnings.simplefilter(action='ignore', category=DeprecationWarning)
+        AdditiveBlock(Fm=SubModule())
+
+
+def test_legacy_affine_coupling():
+    with warnings.catch_warnings():
+        warnings.simplefilter(action='ignore', category=DeprecationWarning)
+        AffineBlock(Fm=SubModule())
