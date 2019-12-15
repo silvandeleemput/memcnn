@@ -1,39 +1,162 @@
+import warnings
 import pytest
+import random
 import torch
 import torch.nn
 import numpy as np
 import copy
-from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid
+from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid, AffineCoupling
 from memcnn import ReversibleBlock
+from memcnn.models.revop import InvertibleModuleWrapper, create_coupling, is_invertible_module
+from memcnn.models.additive import AdditiveCoupling
 
 
 def set_seeds(seed):
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+
+class SubModule(torch.nn.Module):
+    def __init__(self, in_filters=5, out_filters=5):
+        super(SubModule, self).__init__()
+        self.bn = torch.nn.BatchNorm2d(out_filters)
+        self.conv = torch.nn.Conv2d(in_filters, out_filters, (3, 3), padding=1)
+
+    def forward(self, x):
+        return self.bn(self.conv(x))
+
+
+class SubModuleStack(torch.nn.Module):
+    def __init__(self, Gm, coupling='additive', depth=10, implementation_fwd=-1, implementation_bwd=-1,
+                 keep_input=False, adapter=None):
+        super(SubModuleStack, self).__init__()
+        fn = create_coupling(Fm=Gm, Gm=Gm, coupling=coupling, implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd, adapter=adapter)
+        self.stack = torch.nn.ModuleList(
+            [InvertibleModuleWrapper(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input) for _ in range(depth)]
+        )
+
+    def forward(self, x):
+        for rev_module in self.stack:
+            x = rev_module.forward(x)
+        return x
+
+    def inverse(self, y):
+        for rev_module in reversed(self.stack):
+            y = rev_module.inverse(y)
+        return y
+
+
+def is_memory_cleared(var, isclear, shape):
+    if isclear:
+        return var.storage().size() == 0
+    else:
+        return var.storage().size() > 0 and var.shape == shape
+
+
+def test_is_invertible_module():
+    X = torch.zeros(1, 10, 10, 10)
+    assert not is_invertible_module(torch.nn.Conv2d(10, 10, kernel_size=(1, 1)),
+                                    test_input_shape=X.shape)
+    fn = AdditiveCoupling(SubModule(), implementation_bwd=-1, implementation_fwd=-1)
+    assert is_invertible_module(fn, test_input_shape=X.shape)
+    class FakeInverse(torch.nn.Module):
+        def forward(self, x):
+            return x * 4
+
+        def inverse(self, y):
+            return y * 8
+    assert not is_invertible_module(FakeInverse(), test_input_shape=X.shape)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-def test_reversible_block_additive_notimplemented(coupling):
+def test_reversible_block_notimplemented(coupling):
     fm = torch.nn.Conv2d(10, 10, (3, 3), padding=1)
     X = torch.zeros(1, 20, 10, 10)
     with pytest.raises(NotImplementedError):
-        f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=0, implementation_fwd=-2,
-                                  adapter=AffineAdapterNaive)
-        f.forward(X)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=DeprecationWarning)
+            f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=0, implementation_fwd=-2,
+                                      adapter=AffineAdapterNaive)
+            assert isinstance(f, InvertibleModuleWrapper)
+            f.forward(X)
     with pytest.raises(NotImplementedError):
-        f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=-2, implementation_fwd=0,
-                                  adapter=AffineAdapterNaive)
-        f.inverse(X)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=DeprecationWarning)
+            f = ReversibleBlock(fm, coupling=coupling, implementation_bwd=-2, implementation_fwd=0,
+                                      adapter=AffineAdapterNaive)
+            assert isinstance(f, InvertibleModuleWrapper)
+            f.inverse(X)
     with pytest.raises(NotImplementedError):
-        ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
-                              adapter=AffineAdapterNaive)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=DeprecationWarning)
+            ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
+                                  adapter=AffineAdapterNaive)
 
 
-@pytest.mark.parametrize('coupling,adapter', [('additive', None),
-                                              ('affine', AffineAdapterNaive),
-                                              ('affine', AffineAdapterSigmoid)])
-def test_reversible_block_fwd_bwd(coupling, adapter):
-    """ReversibleBlock test of the memory saving forward and backward passes
+class MultiplicationInverse(torch.nn.Module):
+    def __init__(self, factor=2):
+        super(MultiplicationInverse, self).__init__()
+        self.factor = torch.nn.Parameter(torch.ones(1) * factor)
+
+    def forward(self, x):
+        return x * self.factor
+
+    def inverse(self, y):
+        return y / self.factor
+
+
+class IdentityInverse(torch.nn.Module):
+    def __init__(self, multiply_forward=False, multiply_inverse=False):
+        super(IdentityInverse, self).__init__()
+        self.factor = torch.nn.Parameter(torch.ones(1))
+        self.multiply_forward = multiply_forward
+        self.multiply_inverse = multiply_inverse
+
+    def forward(self, x):
+        if self.multiply_forward:
+            return x * self.factor
+        else:
+            return x
+
+    def inverse(self, y):
+        if self.multiply_inverse:
+            return y * self.factor
+        else:
+            return y
+
+
+def test_input_output_invertible_function_share_tensor():
+    fn = IdentityInverse()
+    rm = InvertibleModuleWrapper(fn=fn, keep_input=True, keep_input_inverse=True)
+    X = torch.rand(1, 2, 5, 5, dtype=torch.float32).requires_grad_()
+    assert not is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
+    with pytest.raises(RuntimeError):
+        rm.forward(X)
+    fn.multiply_forward = True
+    rm.forward(X)
+    assert not is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
+    with pytest.raises(RuntimeError):
+        rm.inverse(X)
+    fn.multiply_inverse = True
+    rm.inverse(X)
+    assert is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
+
+
+@pytest.mark.parametrize('fn', [
+    AdditiveCoupling(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1),
+    AffineCoupling(Fm=SubModule(), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterNaive),
+    AffineCoupling(Fm=SubModule(out_filters=10), implementation_fwd=-1, implementation_bwd=-1, adapter=AffineAdapterSigmoid),
+    MultiplicationInverse()
+])
+@pytest.mark.parametrize('bwd', [False, True])
+@pytest.mark.parametrize('keep_input', [False, True])
+@pytest.mark.parametrize('keep_input_inverse', [False, True])
+def test_invertible_module_wrapper_fwd_bwd(fn, bwd, keep_input, keep_input_inverse):
+    """InvertibleModuleWrapper tests for the memory saving forward and backward passes
 
     * test inversion Y = RB(X) and X = RB.inverse(Y)
     * test training the block for a single step and compare weights for implementations: 0, 1
@@ -41,185 +164,237 @@ def test_reversible_block_fwd_bwd(coupling, adapter):
     * test usage of BN to identify non-contiguous memory blocks
 
     """
-    dims = (2, 10, 8, 8)
-    data = np.random.random(dims).astype(np.float32)
-    target_data = np.random.random(dims).astype(np.float32)
-
-    class SubModule(torch.nn.Module):
-        def __init__(self, in_filters, out_filters):
-            super(SubModule, self).__init__()
-            self.bn = torch.nn.BatchNorm2d(out_filters)
-            self.conv = torch.nn.Conv2d(in_filters, out_filters, (3, 3), padding=1)
-
-        def forward(self, x):
-            return self.bn(self.conv(x))
-
-    Gm = SubModule(in_filters=5, out_filters=5 if coupling == 'additive' or adapter is AffineAdapterNaive else 10)
-
-    s_grad = [p.data.numpy().copy() for p in Gm.parameters()]
     for seed in range(10):
         set_seeds(seed)
-        for bwd in [False, True]:
-            impl_out, impl_grad = [], []
-            for keep_input_sub in [False, True]:
-                for keep_input_inverse_sub in [False, True]:
-                    for implementation_fwd in [-1, 0, 1]:
-                        for implementation_bwd in [-1, 0, 1]:
-                            keep_input = keep_input_sub or implementation_fwd == -1
-                            keep_input_inverse = keep_input_inverse_sub or implementation_bwd == -1
-                            # print(bwd, coupling, keep_input, implementation_fwd, implementation_bwd)
-                            # test with zero padded convolution
-                            X = torch.from_numpy(data.copy())
-                            Ytarget = torch.from_numpy(target_data.copy())
-                            Xshape = X.shape
-                            Gm2 = copy.deepcopy(Gm)
-                            rb = ReversibleBlock(Gm2, coupling=coupling, implementation_fwd=implementation_fwd,
-                                                       implementation_bwd=implementation_bwd, adapter=adapter,
-                                                       keep_input=keep_input, keep_input_inverse=keep_input_inverse)
-                            rb.train()
-                            rb.zero_grad()
+        dims = (2, 10, 8, 8)
+        data = torch.rand(*dims, dtype=torch.float32)
+        target_data = torch.rand(*dims, dtype=torch.float32)
 
-                            optim = torch.optim.RMSprop(rb.parameters())
-                            optim.zero_grad()
-                            if not bwd:
-                                Xin = X.clone()
-                                Y = rb(Xin)
-                                Yrev = Y.clone()
-                                Xinv = rb.inverse(Yrev)
-                            else:
-                                Xin = X.clone()
-                                Y = rb.inverse(Xin)
-                                Yrev = Y.clone()
-                                Xinv = rb(Yrev)
-                            loss = torch.nn.MSELoss()(Y, Ytarget)
+        assert is_invertible_module(fn, test_input_shape=data.shape, atol=1e-4)
 
-                            # has input been retained/discarded after forward (and backward) passes?
+        # test with zero padded convolution
+        with torch.set_grad_enabled(True):
+            X = data.clone().requires_grad_()
 
-                            def test_memory_cleared(var, isclear, shape):
-                                if isclear:
-                                    assert var.storage().size() == 0
-                                else:
-                                    assert var.storage().size() > 0
-                                    assert var.shape == shape
+            Ytarget = target_data.clone()
 
-                            if not bwd:
-                                test_memory_cleared(Xin, not keep_input, Xshape)
-                                test_memory_cleared(Yrev, not keep_input_inverse, Xshape)
-                            else:
-                                test_memory_cleared(Yrev, not keep_input, Xshape)
-                                test_memory_cleared(Xin, not keep_input_inverse, Xshape)
+            Xshape = X.shape
 
-                            optim.zero_grad()
-                            loss.backward()
-                            optim.step()
+            rb = InvertibleModuleWrapper(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input_inverse)
+            s_grad = [p.detach().clone() for p in rb.parameters()]
 
-                            assert Y.shape == Xshape
-                            assert X.data.numpy().shape == data.shape
-                            assert np.allclose(X.data.numpy(), data, atol=1e-06)
-                            assert np.allclose(X.data.numpy(), Xinv.data.numpy(), atol=1e-05)
-                            impl_out.append(Y.data.numpy().copy())
-                            impl_grad.append([p.data.numpy().copy() for p in Gm2.parameters()])
-                            assert not np.allclose(impl_grad[-1][0], s_grad[0])
+            rb.train()
+            rb.zero_grad()
 
-                    # output and gradients similar over all implementations?
-                    for i in range(0, len(impl_grad) - 1, 1):
-                        assert np.allclose(impl_grad[i][0], impl_grad[i + 1][0])
-                        assert np.allclose(impl_out[i], impl_out[i + 1])
+            optim = torch.optim.RMSprop(rb.parameters())
+            optim.zero_grad()
+            if not bwd:
+                Xin = X.clone().requires_grad_()
+                Y = rb(Xin)
+                Yrev = Y.detach().clone().requires_grad_()
+                Xinv = rb.inverse(Yrev)
+            else:
+                Xin = X.clone().requires_grad_()
+                Y = rb.inverse(Xin)
+                Yrev = Y.detach().clone().requires_grad_()
+                Xinv = rb(Yrev)
+            loss = torch.nn.MSELoss()(Y, Ytarget)
+
+            # has input been retained/discarded after forward (and backward) passes?
+
+            if not bwd:
+                assert is_memory_cleared(Yrev, not keep_input_inverse, Xshape)
+                assert is_memory_cleared(Xin, not keep_input, Xshape)
+            else:
+                assert is_memory_cleared(Xin, not keep_input_inverse, Xshape)
+                assert is_memory_cleared(Yrev, not keep_input, Xshape)
+
+            optim.zero_grad()
+
+            loss.backward()
+            optim.step()
+
+            assert Y.shape == Xshape
+            assert X.detach().shape == data.shape
+            assert torch.allclose(X.detach(), data, atol=1e-06)
+            assert torch.allclose(X.detach(), Xinv.detach(), atol=1e-05)  # Model is now trained and will differ
+            grads = [p.detach().clone() for p in rb.parameters()]
+
+            assert not torch.allclose(grads[0], s_grad[0])
 
 
 @pytest.mark.parametrize('coupling,adapter', [('additive', None),
                                               ('affine', AffineAdapterNaive),
                                               ('affine', AffineAdapterSigmoid)])
-def test_revblock_chained(coupling, adapter):
+def test_chained_invertible_module_wrapper(coupling, adapter):
     set_seeds(42)
     dims = (2, 10, 8, 8)
-    data = np.random.random(dims).astype(np.float32)
-    target_data = np.random.random(dims).astype(np.float32)
+    data = torch.rand(*dims, dtype=torch.float32)
+    target_data = torch.rand(*dims, dtype=torch.float32)
+    with torch.set_grad_enabled(True):
+        X = data.clone().requires_grad_()
+        Ytarget = target_data.clone()
 
-    X = torch.from_numpy(data.copy())
-    Ytarget = torch.from_numpy(target_data.copy())
+        Gm = SubModule(in_filters=5, out_filters=5 if coupling == 'additive' or adapter is AffineAdapterNaive else 10)
+        rb = SubModuleStack(Gm, coupling=coupling, depth=2, keep_input=False, adapter=adapter, implementation_bwd=-1, implementation_fwd=-1)
+        rb.train()
+        optim = torch.optim.RMSprop(rb.parameters())
 
-    class SubModule(torch.nn.Module):
-        def __init__(self, in_filters, out_filters):
-            super(SubModule, self).__init__()
-            self.bn = torch.nn.BatchNorm2d(out_filters)
-            self.conv = torch.nn.Conv2d(in_filters, out_filters, (3, 3), padding=1)
+        rb.zero_grad()
 
-        def forward(self, x):
-            return self.bn(self.conv(x))
+        optim.zero_grad()
 
-    class SubModuleStack(torch.nn.Module):
-        def __init__(self, Gm, coupling='additive', depth=10, implementation_fwd=1, implementation_bwd=1,
-                     keep_input=False, adapter=None):
-            super(SubModuleStack, self).__init__()
-            self.stack = torch.nn.Sequential(
-                *[ReversibleBlock(Gm, Gm, coupling=coupling, implementation_fwd=implementation_fwd,
-                                        implementation_bwd=implementation_bwd, adapter=adapter,
-                                        keep_input=keep_input) for _ in range(depth)]
-            )
+        Xin = X.clone()
+        Y = rb(Xin)
 
-        def forward(self, x):
-            return self.stack(x)
+        loss = torch.nn.MSELoss()(Y, Ytarget)
+
+        loss.backward()
+        optim.step()
+
+    assert not torch.isnan(loss)
 
 
-    Gm = SubModule(in_filters=5, out_filters=5 if coupling == 'additive' or adapter is AffineAdapterNaive else 10)
-    rb = SubModuleStack(Gm, coupling=coupling, depth=2, keep_input=False, adapter=adapter)
-    rb.train()
-    rb.zero_grad()
+def test_chained_invertible_module_wrapper_shared_fwd_and_bwd_train_passes():
+    set_seeds(42)
+    Gm = SubModule(in_filters=5, out_filters=5)
+    rb_temp = SubModuleStack(Gm=Gm, coupling='additive', depth=5, keep_input=True, adapter=None, implementation_bwd=-1,
+                        implementation_fwd=-1)
+    optim = torch.optim.SGD(rb_temp.parameters(), lr=0.01)
 
-    optim = torch.optim.RMSprop(rb.parameters())
-    optim.zero_grad()
+    initial_params = [p.detach().clone() for p in rb_temp.parameters()]
+    initial_state = copy.deepcopy(rb_temp.state_dict())
+    initial_optim_state = copy.deepcopy(optim.state_dict())
 
-    Xin = X.clone()
-    Y = rb(Xin)
+    dims = (2, 10, 8, 8)
+    data = torch.rand(*dims, dtype=torch.float32)
+    target_data = torch.rand(*dims, dtype=torch.float32)
 
-    loss = torch.nn.MSELoss()(Y, Ytarget)
+    forward_outputs = []
+    inverse_outputs = []
+    for i in range(10):
 
-    optim.zero_grad()
-    loss.backward()
-    optim.step()
+        is_forward_pass = i % 2 == 0
+        set_seeds(42)
+        rb = SubModuleStack(Gm=Gm, coupling='additive', depth=5, keep_input=True,
+                            adapter=None, implementation_bwd=-1,
+                            implementation_fwd=-1)
+        rb.train()
+        with torch.no_grad():
+            for (name, p), p_initial in zip(rb.named_parameters(), initial_params):
+                p.set_(p_initial)
+
+        rb.load_state_dict(initial_state)
+        optim = torch.optim.SGD(rb_temp.parameters(), lr=0.01)
+        optim.load_state_dict(initial_optim_state)
+
+        with torch.set_grad_enabled(True):
+            X = data.detach().clone().requires_grad_()
+            Ytarget = target_data.detach().clone()
+
+            optim.zero_grad()
+
+            if is_forward_pass:
+                Y = rb(X)
+                Xinv = rb.inverse(Y)
+                Xinv2 = rb.inverse(Y)
+                Xinv3 = rb.inverse(Y)
+            else:
+                Y = rb.inverse(X)
+                Xinv = rb(Y)
+                Xinv2 = rb(Y)
+                Xinv3 = rb(Y)
+
+            for item in [Xinv, Xinv2, Xinv3]:
+                assert torch.allclose(X, item, atol=1e-04)
+
+            loss = torch.nn.MSELoss()(Xinv, Ytarget)
+            assert not torch.isnan(loss)
+
+            assert Xinv2.grad is None
+            assert Xinv3.grad is None
+
+            loss.backward()
+
+            assert Y.grad is not None
+            assert Xinv.grad is not None
+            assert Xinv2.grad is None
+            assert Xinv3.grad is None
+
+            loss2 = torch.nn.MSELoss()(Xinv2, Ytarget)
+            assert not torch.isnan(loss2)
+
+            loss2.backward()
+
+            assert Xinv2.grad is not None
+
+            optim.step()
+
+            if is_forward_pass:
+                forward_outputs.append(Y.detach().clone())
+            else:
+                inverse_outputs.append(Y.detach().clone())
+
+    for i in range(4):
+        assert torch.allclose(forward_outputs[-1], forward_outputs[i], atol=1e-06)
+        assert torch.allclose(inverse_outputs[-1], inverse_outputs[i], atol=1e-06)
+
+
+@pytest.mark.parametrize("inverted", [False, True])
+def test_invertible_module_wrapper_disabled_versus_enabled(inverted):
+    set_seeds(42)
+    Gm = SubModule(in_filters=5, out_filters=5)
+
+    coupling_fn = create_coupling(Fm=Gm, Gm=Gm, coupling='additive', implementation_fwd=-1,
+                                  implementation_bwd=-1)
+    rb = InvertibleModuleWrapper(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
+    rb2 = InvertibleModuleWrapper(fn=copy.deepcopy(coupling_fn), keep_input=False, keep_input_inverse=False)
+    rb.eval()
+    rb2.eval()
+    rb2.disable = True
+    with torch.no_grad():
+        dims = (2, 10, 8, 8)
+        data = torch.rand(*dims, dtype=torch.float32)
+        X, X2 = data.clone().detach().requires_grad_(), data.clone().detach().requires_grad_()
+        if not inverted:
+            Y = rb(X)
+            Y2 = rb2(X2)
+        else:
+            Y = rb.inverse(X)
+            Y2 = rb2.inverse(X2)
+
+        assert torch.allclose(Y, Y2)
+
+        assert is_memory_cleared(X, True, dims)
+        assert is_memory_cleared(X2, False, dims)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-def test_revblock_simple_inverse(coupling):
-    """ReversibleBlock inverse test
-
-    * test inversion Y = RB(X) and X = RB.inverse(Y)
-
-    """
+def test_invertible_module_wrapper_simple_inverse(coupling):
+    """InvertibleModuleWrapper inverse test"""
     for seed in range(10):
         set_seeds(seed)
-        for implementation_fwd in [-1, 0, 1]:
-            for implementation_bwd in [-1, 0, 1]:
-                # define some data
-                X = torch.rand(2, 4, 5, 5)
+        # define some data
+        X = torch.rand(2, 4, 5, 5).requires_grad_()
 
-                # define an arbitrary reversible function
-                fn = ReversibleBlock(torch.nn.Conv2d(2, 2, 3, padding=1), keep_input=False, coupling=coupling,
-                                           implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd,
-                                           adapter=AffineAdapterNaive)
+        # define an arbitrary reversible function
+        coupling_fn = create_coupling(Fm=torch.nn.Conv2d(2, 2, 3, padding=1), coupling=coupling, implementation_fwd=-1,
+                                      implementation_bwd=-1, adapter=AffineAdapterNaive)
+        fn = InvertibleModuleWrapper(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
 
-                # compute output
-                Y = fn.forward(X.clone())
+        # compute output
+        Y = fn.forward(X.clone())
 
-                # compute input from output
-                X2 = fn.inverse(Y)
+        # compute input from output
+        X2 = fn.inverse(Y)
 
-                # check that the inverted output and the original input are approximately similar
-                assert np.allclose(X2.data.numpy(), X.data.numpy(), atol=1e-06)
+        # check that the inverted output and the original input are approximately similar
+        assert torch.allclose(X2.detach(), X.detach(), atol=1e-06)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
-@pytest.mark.parametrize('implementation_fwd', [-1, 0, 1])
-@pytest.mark.parametrize('implementation_bwd', [-1, 0, 1])
-def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
-    """ReversibleBlock test if similar gradients and weights results are obtained after similar training
-
-    * test training the block for a single step and compare weights and grads for implementations: 0, 1
-    * test against normal non Reversible Block function
-    * test if recreated input and produced output are contiguous
-
-    """
+def test_normal_vs_invertible_module_wrapper(coupling):
+    """InvertibleModuleWrapper test if similar gradients and weights results are obtained after similar training"""
     for seed in range(10):
         set_seeds(seed)
 
@@ -245,15 +420,16 @@ def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
             e.train()
 
         # define an arbitrary reversible function and define graph for model 1
-        Xin = X.clone()
-        fn = ReversibleBlock(c1_2, c2_2, keep_input=False, coupling=coupling, adapter=AffineAdapterNaive,
-                                   implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd)
+        Xin = X.clone().requires_grad_()
+        coupling_fn = create_coupling(Fm=c1_2, Gm=c2_2, coupling=coupling, implementation_fwd=-1,
+                                      implementation_bwd=-1, adapter=AffineAdapterNaive)
+        fn = InvertibleModuleWrapper(fn=coupling_fn, keep_input=False, keep_input_inverse=False)
+
         Y = fn.forward(Xin)
         loss2 = torch.mean(Y)
 
         # define the reversible function without custom backprop and define graph for model 2
-        XX = X.clone().data
-        XX.requires_grad = True
+        XX = X.clone().detach().requires_grad_()
         x1, x2 = torch.chunk(XX, 2, dim=1)
         if coupling == 'additive':
             y1 = x1 + c1.forward(x2)
@@ -299,13 +475,13 @@ def test_normal_vs_revblock(coupling, implementation_fwd, implementation_bwd):
         assert Y.is_contiguous()
 
         # weights are approximately the same after training both models?
-        assert np.allclose(c1.weight.data.numpy(), c1_2.weight.data.numpy(), atol=1e-06)
-        assert np.allclose(c2.weight.data.numpy(), c2_2.weight.data.numpy())
-        assert np.allclose(c1.bias.data.numpy(), c1_2.bias.data.numpy())
-        assert np.allclose(c2.bias.data.numpy(), c2_2.bias.data.numpy())
+        assert torch.allclose(c1.weight.detach(), c1_2.weight.detach())
+        assert torch.allclose(c2.weight.detach(), c2_2.weight.detach())
+        assert torch.allclose(c1.bias.detach(), c1_2.bias.detach())
+        assert torch.allclose(c2.bias.detach(), c2_2.bias.detach())
 
         # gradients are approximately the same after training both models?
-        assert np.allclose(c1.weight.grad.data.numpy(), c1_2.weight.grad.data.numpy(), atol=1e-06)
-        assert np.allclose(c2.weight.grad.data.numpy(), c2_2.weight.grad.data.numpy())
-        assert np.allclose(c1.bias.grad.data.numpy(), c1_2.bias.grad.data.numpy())
-        assert np.allclose(c2.bias.grad.data.numpy(), c2_2.bias.grad.data.numpy())
+        assert torch.allclose(c1.weight.grad.detach(), c1_2.weight.grad.detach())
+        assert torch.allclose(c2.weight.grad.detach(), c2_2.weight.grad.detach())
+        assert torch.allclose(c1.bias.grad.detach(), c1_2.bias.grad.detach())
+        assert torch.allclose(c2.bias.grad.detach(), c2_2.bias.grad.detach())

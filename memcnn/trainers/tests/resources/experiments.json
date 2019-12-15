@@ -115,10 +115,10 @@
         }
     },
 
-    "epoch1":
+    "epoch5":
     {
         "data_loader_params": {
-            "max_epoch": 1
+            "max_epoch": 5
         }
     }
 }

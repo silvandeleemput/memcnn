@@ -102,10 +102,13 @@ def train(manager,
 
         score = model(vx)
         loss = ceriterion(score, vl)
+
         if use_cuda:
             activation_mem_allocation = torch.cuda.memory_allocated(device) - model_mem_allocation
             act_mem_activations.update(activation_mem_allocation, iteration)
-            # logger.info('Activations memory allocation: {}'.format(activation_mem_allocation))
+
+        if torch.isnan(loss):
+            raise ValueError("Loss became NaN during iteration {}".format(iteration))
 
         optimizer.zero_grad()
         loss.backward()
