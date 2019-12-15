@@ -35,8 +35,6 @@ def backward_hook(grad_output, keep_input, compute_input_fn, compute_output_fn,
         # compute gradients
         with torch.set_grad_enabled(True):
             temp_output = compute_output_fn(input_tensor)
-            with torch.no_grad():
-                temp_output.set_(output_tensor)
             temp_output.backward(gradient=grad_output)
 
 
