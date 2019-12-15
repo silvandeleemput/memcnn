@@ -2,6 +2,16 @@
 History
 =======
 
+1.1.0 (2019-12-15)
+------------------
+
+* A complete refactor of MemCNN with changes to the API
+  * Factored out the code responsible for the memory savings in a separate InvertibleModuleWrapper and reimplemented it using hooks
+  * The InvertibleModuleWrapper allows for arbitrary invertible functions now (not just the additive and affine couplings)
+  * The AdditiveBlock and AffineBlock have been refactored to AdditiveCoupling and AffineCoupling
+  * The ReveribleBlock is now deprecated
+  * The documentation and examples have been updated for the new API changes
+
 1.0.1 (2019-12-08)
 ------------------
 
