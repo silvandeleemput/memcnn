@@ -304,6 +304,9 @@ def test_chained_reversible_module_multiple_forward_and_inverse_train_passes():
                 Xinv2 = rb(Y)
                 Xinv3 = rb(Y)
 
+            for item in [Xinv, Xinv2, Xinv3]:
+                assert torch.allclose(X, item, atol=1e-04)
+
             loss = torch.nn.MSELoss()(Xinv, Ytarget)
             assert not torch.isnan(loss)
 
@@ -481,13 +484,13 @@ def test_normal_vs_reversible_module(coupling):
         assert Y.is_contiguous()
 
         # weights are approximately the same after training both models?
-        assert np.allclose(c1.weight.data.numpy(), c1_2.weight.data.numpy()) #, atol=1e-06)
+        assert np.allclose(c1.weight.data.numpy(), c1_2.weight.data.numpy())
         assert np.allclose(c2.weight.data.numpy(), c2_2.weight.data.numpy())
         assert np.allclose(c1.bias.data.numpy(), c1_2.bias.data.numpy())
         assert np.allclose(c2.bias.data.numpy(), c2_2.bias.data.numpy())
 
         # gradients are approximately the same after training both models?
-        assert np.allclose(c1.weight.grad.data.numpy(), c1_2.weight.grad.data.numpy()) #, atol=1e-06)
+        assert np.allclose(c1.weight.grad.data.numpy(), c1_2.weight.grad.data.numpy())
         assert np.allclose(c2.weight.grad.data.numpy(), c2_2.weight.grad.data.numpy())
         assert np.allclose(c1.bias.grad.data.numpy(), c1_2.bias.grad.data.numpy())
         assert np.allclose(c2.bias.grad.data.numpy(), c2_2.bias.grad.data.numpy())

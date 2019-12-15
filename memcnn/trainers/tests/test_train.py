@@ -69,18 +69,18 @@ def test_run_experiment(tmp_path):
 @pytest.mark.parametrize("network", [
     pytest.param(network,
                  marks=pytest.mark.skipif(
-                     condition=("FULL_NETWORK_TESTS" not in os.environ) and 'revnet38' != network,
-                     reason="Too memory intensive for CI so these are disabled by default. "
+                     condition=("FULL_NETWORK_TESTS" not in os.environ) and ("revnet38" != network),
+                     reason="Too memory intensive for CI so these tests are disabled by default. "
                             "Set FULL_NETWORK_TESTS environment variable to enable the tests.")
                  )
-    for network in ['resnet32', 'resnet110', 'resnet164', 'revnet38', 'revnet110', 'revnet164']
+    for network in ["resnet32", "resnet110", "resnet164", "revnet38", "revnet110", "revnet164"]
 ])
 @pytest.mark.parametrize("use_cuda", [
     False,
     pytest.param(True, marks=pytest.mark.skipif(condition=not torch.cuda.is_available(), reason="No GPU available"))
 ])
 def test_train_networks(tmp_path, network, use_cuda):
-    exptags = ['cifar10', network, 'epoch5']
+    exptags = ["cifar10", network, "epoch5"]
     exp_file = str(Path(__file__).parent / "resources" / "experiments.json")
     data_dir = str(tmp_path / "tmpdata")
     results_dir = str(tmp_path / "resdir")
