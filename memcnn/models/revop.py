@@ -177,6 +177,10 @@ class ReversibleBlock(InvertibleModuleWrapper):
                  implementation_fwd=-1, implementation_bwd=-1, adapter=None):
         """The ReversibleBlock
 
+        Warning
+        -------
+        This class has been deprecated. Use the more flexible InvertibleModuleWrapper class.
+
         Note
         ----
         The `implementation_fwd` and `implementation_bwd` parameters can be set to one of the following implementations:
@@ -257,6 +261,25 @@ def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, imp
 
 
 def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.float32, atol=1e-6):
+    """Test if a :obj:`torch.nn.Module` is invertible
+
+    Parameters
+    ----------
+    module_in : :obj:`torch.nn.Module`
+        A torch.nn.Module to test.
+    test_input_shape : :obj:`tuple`
+        Dimensions of test tensor object to perform the test with.
+    test_input_dtype : :obj:`torch.dtype`, optional
+        Data type of test tensor object to perform the test with.
+    atol : :obj:`float`, optional
+        Tolerance value used for comparing the outputs
+
+    Returns
+    -------
+        :obj:`bool`
+            True if the input module is invertible, False otherwise.
+
+    """
     test_input = torch.rand(test_input_shape, dtype=test_input_dtype)
     if not hasattr(module_in, "inverse"):
         return False

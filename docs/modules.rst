@@ -2,7 +2,8 @@
 Modules
 =======
 
-.. automethod:: memcnn.is_invertible_module
+.. automodule:: memcnn
+  :members: is_invertible_module
 
 .. autoclass:: memcnn.AdditiveCoupling
   :members: forward, inverse
