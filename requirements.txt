@@ -1,4 +1,4 @@
-Pillow
+Pillow<7.0.0
 numpy
 SimpleITK
 tensorboardX==1.4
