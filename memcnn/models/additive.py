@@ -7,22 +7,31 @@ from torch import set_grad_enabled
 
 class AdditiveCoupling(nn.Module):
     def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1):
-        """The AdditiveBlock
+        """
+        This computes the output :math:`y` on forward given input :math:`x` and arbitrary modules :math:`Fm` and :math:`Gm` according to:
+
+        :math:`(x1, x2) = x`
+
+        :math:`y1 = x1 + Fm(x2)`
+
+        :math:`y2 = x2 + Gm(y1)`
+
+        :math:`y = (y1, y2)`
 
         Parameters
         ----------
-            Fm : torch.nn.Module
+            Fm : :obj:`torch.nn.Module`
                 A torch.nn.Module encapsulating an arbitrary function
 
-            Gm : torch.nn.Module
+            Gm : :obj:`torch.nn.Module`
                 A torch.nn.Module encapsulating an arbitrary function
                 (If not specified a deepcopy of Fm is used as a Module)
 
-            implementation_fwd : int
-                Switch between different Additive Operation implementations for forward pass. Default = 1
+            implementation_fwd : :obj:`int`
+                Switch between different Additive Operation implementations for forward pass. Default = -1
 
-            implementation_bwd : int
-                Switch between different Additive Operation implementations for inverse pass. Default = 1
+            implementation_bwd : :obj:`int`
+                Switch between different Additive Operation implementations for inverse pass. Default = -1
 
         """
         super(AdditiveCoupling, self).__init__()

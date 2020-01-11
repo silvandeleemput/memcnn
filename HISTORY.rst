@@ -2,6 +2,12 @@
 History
 =======
 
+1.1.1 (2020-01-11)
+------------------
+
+* Fixed some versions in the requirements for TensorFlow and Pillow to avoid errors and segfaults
+* The module auto documentation has been updated for the new API changes
+
 1.1.0 (2019-12-15)
 ------------------
 

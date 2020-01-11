@@ -42,26 +42,43 @@ class AffineAdapterSigmoid(nn.Module):
 
 class AffineCoupling(nn.Module):
     def __init__(self, Fm, Gm=None, adapter=None, implementation_fwd=-1, implementation_bwd=-1):
-        """The AffineBlock
+        """
+        This computes the output :math:`y` on forward given input :math:`x` and arbitrary modules :math:`Fm` and :math:`Gm` according to:
+
+        :math:`(x1, x2) = x`
+
+        :math:`(log({s1}), t1) = Fm(x2)`
+
+        :math:`s1 = exp(log({s1}))`
+
+        :math:`y1 = s1 * x1 + t1`
+
+        :math:`(log({s2}), t2) = Gm(y1)`
+
+        :math:`s2 = exp(log({s2}))`
+
+        :math:`y2 = s2 * x2 + t2`
+
+        :math:`y = (y1, y2)`
 
         Parameters
         ----------
-            Fm : torch.nn.Module
+            Fm : :obj:`torch.nn.Module`
                 A torch.nn.Module encapsulating an arbitrary function
 
-            Gm : torch.nn.Module
+            Gm : :obj:`torch.nn.Module`
                 A torch.nn.Module encapsulating an arbitrary function
                 (If not specified a deepcopy of Gm is used as a Module)
 
-            adapter : torch.nn.Module class
+            adapter : :obj:`torch.nn.Module` class
                 An optional wrapper class A for Fm and Gm which must output
                 s, t = A(x) with shape(s) = shape(t) = shape(x)
                 s, t are respectively the scale and shift tensors for the affine coupling.
 
-            implementation_fwd : int
+            implementation_fwd : :obj:`int`
                 Switch between different Affine Operation implementations for forward pass. Default = -1
 
-            implementation_bwd : int
+            implementation_bwd : :obj:`int`
                 Switch between different Affine Operation implementations for inverse pass. Default = -1
 
         """
