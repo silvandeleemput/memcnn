@@ -2,13 +2,12 @@ version: 2.1
 aliases:
   - &container_python
     docker:
-      - image: circleci/python:3.6.4  # primary container for the build job
+      - image: circleci/python:3.7  # primary container for the build job
 
   - &run_task_install_tox_dependencies
     run:
       name: install tox dependencies
       command: |
-        sudo printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" | sudo tee /etc/apt/sources.list
         sudo apt-get update
         sudo apt install -y build-essential libssl-dev libpython-dev python python-pip
         sudo apt-get remove python-pip
@@ -23,7 +22,7 @@ jobs:
     parameters:
       tests:
         type: string
-        default: py27-torch04,py27-torch10,py27-torch11,py36-torch04,py36-torch10,py36-torch11
+        default: py27-torch04,py27-torch10,py27-torch11,py37-torch04,py37-torch10,py37-torch11,py37-torch14
     <<: *container_python
     steps:
       - checkout
@@ -165,20 +164,26 @@ workflows:
             tags:
               only: /.*/
       - testing:
-          name: testing_py36_torch04
-          tests: py36-torch04
+          name: testing_py37_torch04
+          tests: py37-torch04
           filters:
             tags:
               only: /.*/
       - testing:
-          name: testing_py36_torch10
-          tests: py36-torch10
+          name: testing_py37_torch10
+          tests: py37-torch10
           filters:
             tags:
               only: /.*/
       - testing:
-          name: testing_py36_torch11
-          tests: py36-torch11
+          name: testing_py37_torch11
+          tests: py37-torch11
+          filters:
+            tags:
+              only: /.*/
+      - testing:
+          name: testing_py37_torch14
+          tests: py37-torch14
           filters:
             tags:
               only: /.*/
@@ -187,9 +192,10 @@ workflows:
             - testing_py27_torch04
             - testing_py27_torch10
             - testing_py27_torch11
-            - testing_py36_torch04
-            - testing_py36_torch10
-            - testing_py36_torch11
+            - testing_py37_torch04
+            - testing_py37_torch10
+            - testing_py37_torch11
+            - testing_py37_torch14
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/

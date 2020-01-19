@@ -11,4 +11,4 @@ After installing MemCNN run:
 
 Datasets are automatically downloaded if they are not available.
 
-When using Python 3.* replace the ``python`` directive with the appropriate Python 3 directive. For example when using the MemCNN docker image use ``python3.6``.
+When using Python 3.* replace the ``python`` directive with the appropriate Python 3 directive. For example when using the MemCNN docker image use ``python3.7``.

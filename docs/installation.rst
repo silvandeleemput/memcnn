@@ -94,7 +94,7 @@ For ``--runtime=nvidia`` to work `nvidia-docker <https://github.com/nvidia/nvidi
 It can be omitted but this will drop GPU training support.
 
 This will open a preconfigured bash shell, which is correctly configured
-to run the experiments. The latest version has Ubuntu 18.04 and Python 3.6 installed.
+to run the experiments. The latest version has Ubuntu 18.04 and Python 3.7 installed.
 
 By default, the datasets and experimental results will be put inside the created
 docker container under: ``\home\user\data`` and
