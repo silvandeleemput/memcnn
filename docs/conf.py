@@ -56,7 +56,7 @@ napoleon_numpy_docstring = True
 
 # autodoc settings
 autoclass_content = 'both'
-autodoc_mock_imports = ['torch', 'torch.nn', 'numpy', 'tensorflow', 'torchvision']
+autodoc_mock_imports = ['torch', 'torch.nn', 'numpy', 'torchvision']
 
 
 intersphinx_mapping = {

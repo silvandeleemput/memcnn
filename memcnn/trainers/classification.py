@@ -1,12 +1,9 @@
-import os
 import time
 import logging
 import torch
-from memcnn.utils.stats import AverageMeter, accuracy
-from memcnn.utils.tensorboard import parse_logs
-from tensorboardX import SummaryWriter
 import numpy as np
-
+from memcnn.utils.stats import AverageMeter, accuracy
+from memcnn.utils.log import SummaryWriter
 
 logger = logging.getLogger('trainer')
 
@@ -152,10 +149,8 @@ def train(manager,
 
         if iteration % save_iter == 0:
             manager.save_train_state(iteration)
+            writer.flush()
 
         end = time.time()
 
     writer.close()
-
-    # Generate final scalars.json summary file from all generated log_files
-    parse_logs(manager.log_dir, os.path.join(manager.log_dir, "scalars.json"))
