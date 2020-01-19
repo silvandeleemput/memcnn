@@ -217,7 +217,7 @@ def test_invertible_module_wrapper_fwd_bwd(fn, bwd, keep_input, keep_input_inver
             assert Y.shape == Xshape
             assert X.detach().shape == data.shape
             assert torch.allclose(X.detach(), data, atol=1e-06)
-            assert torch.allclose(X.detach(), Xinv.detach(), atol=1e-05)  # Model is now trained and will differ
+            assert torch.allclose(X.detach(), Xinv.detach(), atol=1e-04)  # Model is now trained and will differ
             grads = [p.detach().clone() for p in rb.parameters()]
 
             assert not torch.allclose(grads[0], s_grad[0])
