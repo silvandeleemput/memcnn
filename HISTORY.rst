@@ -2,6 +2,13 @@
 History
 =======
 
+1.2.0 (2020-01-19)
+------------------
+
+* Replaced TensorBoard logging with simple json file logging which removed the cumbersome TensorBoard and TensorFlow dependencies
+* Updated the Dockerfile for Python37 and PyTorch 1.4.0
+* Updated the CI tests Py36 versions to Py37, also added a new CI test for PyTorch 1.4.0
+
 1.1.1 (2020-01-11)
 ------------------
 
