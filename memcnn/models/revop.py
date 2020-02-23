@@ -280,6 +280,8 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
             True if the input module is invertible, False otherwise.
 
     """
+    if isinstance(module_in, InvertibleModuleWrapper):
+        module_in = module_in._fn
     test_input = torch.rand(test_input_shape, dtype=test_input_dtype)
     if not hasattr(module_in, "inverse"):
         return False

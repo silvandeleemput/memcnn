@@ -72,6 +72,21 @@ def test_is_invertible_module():
     assert not is_invertible_module(FakeInverse(), test_input_shape=X.shape)
 
 
+def test_is_invertible_module_wrapped():
+    X = torch.zeros(1, 10, 10, 10)
+    assert not is_invertible_module(InvertibleModuleWrapper(torch.nn.Conv2d(10, 10, kernel_size=(1, 1))),
+                                    test_input_shape=X.shape)
+    fn = InvertibleModuleWrapper(AdditiveCoupling(SubModule(), implementation_bwd=-1, implementation_fwd=-1))
+    assert is_invertible_module(fn, test_input_shape=X.shape)
+    class FakeInverse(torch.nn.Module):
+        def forward(self, x):
+            return x * 4
+
+        def inverse(self, y):
+            return y * 8
+    assert not is_invertible_module(InvertibleModuleWrapper(FakeInverse()), test_input_shape=X.shape)
+
+
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
 def test_reversible_block_notimplemented(coupling):
     fm = torch.nn.Conv2d(10, 10, (3, 3), padding=1)
