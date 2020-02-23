@@ -2,6 +2,11 @@
 History
 =======
 
+1.2.1 (2020-02-24)
+------------------
+
+* Added InvertibleModuleWrapper support to is_invertible_module test
+
 1.2.0 (2020-01-19)
 ------------------
 

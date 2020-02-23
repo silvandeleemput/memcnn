@@ -4,7 +4,7 @@
 
 __author__ = """Sil van de Leemput"""
 __email__ = 'silvandeleemput@gmail.com'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 
 from memcnn.models.revop import ReversibleBlock, InvertibleModuleWrapper, create_coupling, is_invertible_module
