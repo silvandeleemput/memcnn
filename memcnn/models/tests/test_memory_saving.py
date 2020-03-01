@@ -255,7 +255,7 @@ def test_memory_saving_invertible_model_wrapper(device, coupling, keep_input):
         gc.enable()
 
         if device == 'cpu':
-            memuse = 0.05
+            memuse = 0.08
         else:
             memuse = float(np.prod(dims + [depth, 4, ])) / float(1024 ** 2)
 

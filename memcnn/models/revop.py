@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from functools import partial
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,38 +8,39 @@ from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
 
 
-warnings.filterwarnings(action='ignore', category=UserWarning)
-
-
-class ReversibleFunction(torch.autograd.Function):
+class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, fn, fn_inverse, keep_input, *weights):
+    def forward(ctx, input, fn, fn_inverse, keep_input, num_bwd_passes, *weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
         ctx.keep_input = keep_input
         ctx.input_requires_grad = input.requires_grad
         ctx.weights = weights
+        ctx.num_bwd_passes = num_bwd_passes
 
         with torch.no_grad():
             x = input.detach()  # Makes a detached copy which shares the storage
             output = ctx.fn(x)
 
-        output = output.detach_().requires_grad_()  # Detaches y in-place (inbetween computations can now be discarded)
+        detached_output = output.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
 
         # store these tensor nodes for backward pass
-        # ctx.save_for_backward(input, output)
         ctx.input_t = input
-        ctx.output_t = output
+        ctx.output_t = [detached_output] * num_bwd_passes
 
-        return output
+        return detached_output
 
     @staticmethod
     def backward(ctx, grad_output):
+        if not torch.autograd._is_checkpoint_valid():
+            raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
         # retrieve input and output tensor nodes
-        # input, output = ctx.saved_tensors
         input = ctx.input_t
-        output = ctx.output_t
+        if len(ctx.output_t) == 0:
+            raise RuntimeError("Trying to perform backward on the InvertibleCheckpointFunction for more than "
+                               "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_passes))
+        output = ctx.output_t.pop()
 
         # recompute input if necessary
         if not ctx.keep_input:
@@ -56,20 +56,16 @@ class ReversibleFunction(torch.autograd.Function):
         with torch.set_grad_enabled(True):
             detached_input = input.detach().requires_grad_()
             temp_output = ctx.fn(detached_input)
-            # torch.autograd.backward(temp_output, detached_input)
-            # temp_output.backward(gradient=grad_output)
-            # gradients = (temp_output.grad,) + tuple([w.grad for w in ctx.weights])
-            # #
 
         gradients = torch.autograd.grad(outputs=temp_output, inputs=(detached_input, ) + tuple(ctx.weights), grad_outputs=grad_output)
         input.grad = gradients[0]
         output.grad = grad_output
 
-        return (gradients[0], None, None, None) + gradients[1:]
+        return (gradients[0], None, None, None, None) + gradients[1:]
 
 
 class InvertibleModuleWrapper(nn.Module):
-    def __init__(self, fn, keep_input=False, keep_input_inverse=False, disable=False):
+    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1, disable=False):
         """
         The InvertibleModuleWrapper which enables memory savings during training by exploiting
         the invertible properties of the wrapped module.
@@ -87,6 +83,13 @@ class InvertibleModuleWrapper(nn.Module):
             keep_input_inverse : :obj:`bool`, optional
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
+
+            num_bwd_passes :obj:`int`, optional
+                Number of backward passes to retain a link with the output. After the last backward pass the output
+                is discarded and memory is freed.
+                Warning: if this value is raised higher than the number of required passes memory will not be freed
+                correctly anymore and the training process can quickly run out of memory.
+                Hence, The typical use case is to keep this at 1, until it raises an error for raising this value.
 
             disable : :obj:`bool`, optional
                 This will disable the detached graph approach with the backward hook.
@@ -113,6 +116,7 @@ class InvertibleModuleWrapper(nn.Module):
         self.disable = disable
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
+        self.num_bwd_passes = num_bwd_passes
         self._fn = fn
 
     def forward(self, xin):
@@ -130,7 +134,7 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            y = ReversibleFunction.apply(xin, self._fn.forward, self._fn.inverse, self.keep_input, *[p for p in self._fn.parameters() if p.requires_grad])
+            y = InvertibleCheckpointFunction.apply(xin, self._fn.forward, self._fn.inverse, self.keep_input, self.num_bwd_passes, *[p for p in self._fn.parameters() if p.requires_grad])
             if not self.keep_input:
                 if not pytorch_version_one_and_above:
                     # PyTorch 0.4 way to clear storage
@@ -157,7 +161,7 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            x = ReversibleFunction.apply(yin, self._fn.inverse, self._fn.forward, self.keep_input_inverse, *[p for p in self._fn.parameters() if p.requires_grad])
+            x = InvertibleCheckpointFunction.apply(yin, self._fn.inverse, self._fn.forward, self.keep_input_inverse, self.num_bwd_passes, *[p for p in self._fn.parameters() if p.requires_grad])
             if not self.keep_input_inverse:
                 if not pytorch_version_one_and_above:
                     # PyTorch 0.4 way to clear storage
