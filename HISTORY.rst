@@ -2,6 +2,15 @@
 History
 =======
 
+1.3.0 (2020-03-01)
+------------------
+
+* Updated underlying mechanics for the InvertibleModuleWrapper
+  * Hooks have been replaced by a torch.autograd.Function called InvertibleCheckpointFunction
+  * Identity functions are now supported
+* Reported unstable memory behavior should be fixed now when using the InvertibleModuleWrapper!
+* Minor changes to test suite
+
 1.2.1 (2020-02-24)
 ------------------
 
