@@ -149,13 +149,11 @@ def test_input_output_invertible_function_share_tensor():
     rm = InvertibleModuleWrapper(fn=fn, keep_input=True, keep_input_inverse=True)
     X = torch.rand(1, 2, 5, 5, dtype=torch.float32).requires_grad_()
     assert not is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
-    with pytest.raises(RuntimeError):
-        rm.forward(X)
+    rm.forward(X)
     fn.multiply_forward = True
     rm.forward(X)
     assert not is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
-    with pytest.raises(RuntimeError):
-        rm.inverse(X)
+    rm.inverse(X)
     fn.multiply_inverse = True
     rm.inverse(X)
     assert is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)

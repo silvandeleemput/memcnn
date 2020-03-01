@@ -1,5 +1,4 @@
 import logging
-from pathlib2 import Path
 from memcnn.utils.log import setup, SummaryWriter
 
 
@@ -9,7 +8,7 @@ def test_setup(tmp_path):
 
 
 def test_summary_writer(tmp_path):
-    logfile = Path(tmp_path / 'scalars.json')
+    logfile = tmp_path / 'scalars.json'
 
     assert not logfile.exists()
     writer = SummaryWriter(log_dir=str(tmp_path))

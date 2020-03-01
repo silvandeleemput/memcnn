@@ -73,8 +73,6 @@ def test_experiment_manager(tmp_path):
     assert not man.model.weight.equal(w)
     assert sd != man.optimizer.state_dict()
     assert man.model.weight.equal(w2)
-    print(sd2)
-    print(man.optimizer.state_dict())
 
     def retrieve_mom_buffer(sd):
         keys = [e for e in sd['state'].keys()]
