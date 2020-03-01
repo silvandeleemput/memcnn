@@ -10,33 +10,33 @@ from memcnn.models.utils import pytorch_version_one_and_above
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, fn, fn_inverse, keep_input, num_bwd_passes, *weights):
+    def forward(ctx, input_t, fn, fn_inverse, keep_input, num_bwd_passes, *weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
         ctx.keep_input = keep_input
-        ctx.input_requires_grad = input.requires_grad
+        ctx.input_requires_grad = input_t.requires_grad
         ctx.weights = weights
         ctx.num_bwd_passes = num_bwd_passes
 
         with torch.no_grad():
-            x = input.detach()  # Makes a detached copy which shares the storage
+            x = input_t.detach()  # Makes a detached copy which shares the storage
             output = ctx.fn(x)
 
         detached_output = output.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
 
         # store these tensor nodes for backward pass
-        ctx.input_t = input
+        ctx.input_t = input_t
         ctx.output_t = [detached_output] * num_bwd_passes
 
         return detached_output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, grad_output):  # pragma: no cover
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
         # retrieve input and output tensor nodes
-        input = ctx.input_t
+        input_t = ctx.input_t
         if len(ctx.output_t) == 0:
             raise RuntimeError("Trying to perform backward on the InvertibleCheckpointFunction for more than "
                                "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_passes))
@@ -47,18 +47,18 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
             with torch.no_grad():
                 input_inverted = ctx.fn_inverse(output)
                 if pytorch_version_one_and_above:
-                    input.storage().resize_(int(np.prod(input.size())))
-                    input.set_(input_inverted)
+                    input_t.storage().resize_(int(np.prod(input_t.size())))
+                    input_t.set_(input_inverted)
                 else:
-                    input.set_(input_inverted)
+                    input_t.set_(input_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
-            detached_input = input.detach().requires_grad_()
+            detached_input = input_t.detach().requires_grad_()
             temp_output = ctx.fn(detached_input)
 
         gradients = torch.autograd.grad(outputs=temp_output, inputs=(detached_input, ) + tuple(ctx.weights), grad_outputs=grad_output)
-        input.grad = gradients[0]
+        input_t.grad = gradients[0]
         output.grad = grad_output
 
         return (gradients[0], None, None, None, None) + gradients[1:]
