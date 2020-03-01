@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from functools import partial
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,37 +8,64 @@ from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
 
 
-warnings.filterwarnings(action='ignore', category=UserWarning)
+class InvertibleCheckpointFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input_t, fn, fn_inverse, keep_input, num_bwd_passes, *weights):
+        # store in context
+        ctx.fn = fn
+        ctx.fn_inverse = fn_inverse
+        ctx.keep_input = keep_input
+        ctx.input_requires_grad = input_t.requires_grad
+        ctx.weights = weights
+        ctx.num_bwd_passes = num_bwd_passes
 
+        with torch.no_grad():
+            x = input_t.detach()  # Makes a detached copy which shares the storage
+            output = ctx.fn(x)
 
-def signal_hook(grad_output, valid_states, state_index):  # pragma: no cover
-    state = valid_states[state_index]
-    valid_states[state_index] = not state
+        detached_output = output.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
 
+        # store these tensor nodes for backward pass
+        ctx.input_t = input_t
+        ctx.output_t = [detached_output] * num_bwd_passes
 
-def backward_hook(grad_output, keep_input, compute_input_fn, compute_output_fn,
-                  input_tensor, output_tensor, valid_states, state_index):  # pragma: no cover
-    perform_action = valid_states[state_index]
-    valid_states[state_index] = not perform_action
-    if perform_action:
-        # restore input
-        if not keep_input:
+        return detached_output
+
+    @staticmethod
+    def backward(ctx, grad_output):  # pragma: no cover
+        if not torch.autograd._is_checkpoint_valid():
+            raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
+        # retrieve input and output tensor nodes
+        input_t = ctx.input_t
+        if len(ctx.output_t) == 0:
+            raise RuntimeError("Trying to perform backward on the InvertibleCheckpointFunction for more than "
+                               "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_passes))
+        output = ctx.output_t.pop()
+
+        # recompute input if necessary
+        if not ctx.keep_input:
             with torch.no_grad():
-                input_inverted = compute_input_fn(output_tensor)
+                input_inverted = ctx.fn_inverse(output)
                 if pytorch_version_one_and_above:
-                    input_tensor.storage().resize_(int(np.prod(input_tensor.size())))
-                    input_tensor.set_(input_inverted)
+                    input_t.storage().resize_(int(np.prod(input_t.size())))
+                    input_t.set_(input_inverted)
                 else:
-                    input_tensor.set_(input_inverted)
+                    input_t.set_(input_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
-            temp_output = compute_output_fn(input_tensor)
-            temp_output.backward(gradient=grad_output)
+            detached_input = input_t.detach().requires_grad_()
+            temp_output = ctx.fn(detached_input)
+
+        gradients = torch.autograd.grad(outputs=temp_output, inputs=(detached_input, ) + tuple(ctx.weights), grad_outputs=grad_output)
+        input_t.grad = gradients[0]
+        output.grad = grad_output
+
+        return (gradients[0], None, None, None, None) + gradients[1:]
 
 
 class InvertibleModuleWrapper(nn.Module):
-    def __init__(self, fn, keep_input=False, keep_input_inverse=False, disable=False):
+    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1, disable=False):
         """
         The InvertibleModuleWrapper which enables memory savings during training by exploiting
         the invertible properties of the wrapped module.
@@ -57,6 +83,13 @@ class InvertibleModuleWrapper(nn.Module):
             keep_input_inverse : :obj:`bool`, optional
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
+
+            num_bwd_passes :obj:`int`, optional
+                Number of backward passes to retain a link with the output. After the last backward pass the output
+                is discarded and memory is freed.
+                Warning: if this value is raised higher than the number of required passes memory will not be freed
+                correctly anymore and the training process can quickly run out of memory.
+                Hence, The typical use case is to keep this at 1, until it raises an error for raising this value.
 
             disable : :obj:`bool`, optional
                 This will disable the detached graph approach with the backward hook.
@@ -83,10 +116,8 @@ class InvertibleModuleWrapper(nn.Module):
         self.disable = disable
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
+        self.num_bwd_passes = num_bwd_passes
         self._fn = fn
-        self._valid_states = []
-        self._state_counter = 0
-
 
     def forward(self, xin):
         """Forward operation :math:`R(x) = y`
@@ -103,29 +134,14 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            x = xin.detach()  # Makes a detached copy which shares the storage
-            y = self._fn(x)
-            input_tensor = xin
-            output_tensor = y
-            # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
+            y = InvertibleCheckpointFunction.apply(xin, self._fn.forward, self._fn.inverse, self.keep_input, self.num_bwd_passes, *[p for p in self._fn.parameters() if p.requires_grad])
             if not self.keep_input:
                 if not pytorch_version_one_and_above:
                     # PyTorch 0.4 way to clear storage
-                    input_tensor.data.set_()
+                    xin.data.set_()
                 else:
                     # PyTorch 1.0+ way to clear storage
-                    input_tensor.storage().resize_(0)
-            if self.training:
-                self._valid_states.append(True)
-                xin.register_hook(hook=partial(signal_hook, valid_states=self._valid_states, state_index=self._state_counter))
-                y.register_hook(hook=partial(backward_hook, keep_input=self.keep_input,
-                                             compute_input_fn=self._fn.inverse, compute_output_fn=self._fn.forward,
-                                             valid_states=self._valid_states, state_index=self._state_counter,
-                                             input_tensor=input_tensor, output_tensor=output_tensor))
-                self._state_counter += 1
-
-            y.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
-            y.requires_grad = self.training
+                    xin.storage().resize_(0)
         else:
             y = self._fn(xin)
         return y
@@ -145,28 +161,14 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            y = yin.detach()  # Makes a detached copy which shares the storage
-            x = self._fn.inverse(y)
-            input_tensor = yin
-            output_tensor = x
-            # clears the referenced storage data linked to the input tensor as it can be reversed on the backward pass
+            x = InvertibleCheckpointFunction.apply(yin, self._fn.inverse, self._fn.forward, self.keep_input_inverse, self.num_bwd_passes, *[p for p in self._fn.parameters() if p.requires_grad])
             if not self.keep_input_inverse:
                 if not pytorch_version_one_and_above:
                     # PyTorch 0.4 way to clear storage
-                    input_tensor.data.set_()
+                    yin.data.set_()
                 else:
                     # PyTorch 1.0+ way to clear storage
-                    input_tensor.storage().resize_(0)
-            if self.training:
-                self._valid_states.append(True)
-                yin.register_hook(hook=partial(signal_hook, valid_states=self._valid_states, state_index=self._state_counter))
-                x.register_hook(hook=partial(backward_hook, keep_input=self.keep_input_inverse,
-                                             compute_input_fn=self._fn.forward, compute_output_fn=self._fn.inverse,
-                                             valid_states=self._valid_states, state_index=self._state_counter,
-                                             input_tensor=input_tensor, output_tensor=output_tensor))
-                self._state_counter += 1
-            x.detach_()  # Detaches x in-place (inbetween computations can now be discarded)
-            x.requires_grad = self.training
+                    yin.storage().resize_(0)
         else:
             x = self._fn.inverse(yin)
         return x

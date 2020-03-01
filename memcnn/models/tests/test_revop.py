@@ -32,11 +32,11 @@ class SubModule(torch.nn.Module):
 
 class SubModuleStack(torch.nn.Module):
     def __init__(self, Gm, coupling='additive', depth=10, implementation_fwd=-1, implementation_bwd=-1,
-                 keep_input=False, adapter=None):
+                 keep_input=False, adapter=None, num_bwd_passes=1):
         super(SubModuleStack, self).__init__()
         fn = create_coupling(Fm=Gm, Gm=Gm, coupling=coupling, implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd, adapter=adapter)
         self.stack = torch.nn.ModuleList(
-            [InvertibleModuleWrapper(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input) for _ in range(depth)]
+            [InvertibleModuleWrapper(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input, num_bwd_passes=num_bwd_passes) for _ in range(depth)]
         )
 
     def forward(self, x):
@@ -149,13 +149,11 @@ def test_input_output_invertible_function_share_tensor():
     rm = InvertibleModuleWrapper(fn=fn, keep_input=True, keep_input_inverse=True)
     X = torch.rand(1, 2, 5, 5, dtype=torch.float32).requires_grad_()
     assert not is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
-    with pytest.raises(RuntimeError):
-        rm.forward(X)
+    rm.forward(X)
     fn.multiply_forward = True
     rm.forward(X)
     assert not is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
-    with pytest.raises(RuntimeError):
-        rm.inverse(X)
+    rm.inverse(X)
     fn.multiply_inverse = True
     rm.inverse(X)
     assert is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
@@ -293,7 +291,7 @@ def test_chained_invertible_module_wrapper_shared_fwd_and_bwd_train_passes():
         set_seeds(42)
         rb = SubModuleStack(Gm=Gm, coupling='additive', depth=5, keep_input=True,
                             adapter=None, implementation_bwd=-1,
-                            implementation_fwd=-1)
+                            implementation_fwd=-1, num_bwd_passes=2)
         rb.train()
         with torch.no_grad():
             for (name, p), p_initial in zip(rb.named_parameters(), initial_params):
