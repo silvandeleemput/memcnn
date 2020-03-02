@@ -26,7 +26,7 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         detached_output = output.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
 
         # store these tensor nodes for backward pass
-        ctx.input_t = input_t
+        ctx.input_t = [input_t] * num_bwd_passes
         ctx.output_t = [detached_output] * num_bwd_passes
 
         return detached_output
@@ -36,10 +36,10 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
         # retrieve input and output tensor nodes
-        input_t = ctx.input_t
         if len(ctx.output_t) == 0:
             raise RuntimeError("Trying to perform backward on the InvertibleCheckpointFunction for more than "
                                "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_passes))
+        input_t = ctx.input_t.pop()
         output = ctx.output_t.pop()
 
         # recompute input if necessary
