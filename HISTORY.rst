@@ -2,6 +2,10 @@
 History
 =======
 
+1.3.1 (2020-03-02)
+------------------
+* HOTFIX InvertibleCheckpointFunction uses ref_count for inputs as well to avoid memory spikes
+
 1.3.0 (2020-03-01)
 ------------------
 
