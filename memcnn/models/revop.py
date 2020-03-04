@@ -10,20 +10,29 @@ from memcnn.models.utils import pytorch_version_one_and_above
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input_t, fn, fn_inverse, keep_input, num_bwd_passes, *weights):
+    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, *inputs_and_weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
         ctx.keep_input = keep_input
-        ctx.input_requires_grad = input_t.requires_grad
-        ctx.weights = weights
+        ctx.weights = inputs_and_weights[num_inputs:]
         ctx.num_bwd_passes = num_bwd_passes
+        ctx.num_inputs = num_inputs
+
+        input_t = inputs_and_weights[:num_inputs]
+        ctx.input_requires_grad = [element.requires_grad for element in input_t]
 
         with torch.no_grad():
-            x = input_t.detach()  # Makes a detached copy which shares the storage
-            output = ctx.fn(x)
+            # Makes a detached copy which shares the storage
+            x = [element.detach() for element in input_t]
+            output = ctx.fn(*x)
 
-        detached_output = output.detach_()  # Detaches y in-place (inbetween computations can now be discarded)
+
+        if not isinstance(output, tuple):
+            output = (output,)
+
+        # Detaches y in-place (inbetween computations can now be discarded)
+        detached_output = tuple([element.detach_() for element in output])
 
         # store these tensor nodes for backward pass
         ctx.input_t = [input_t] * num_bwd_passes
@@ -32,36 +41,40 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         return detached_output
 
     @staticmethod
-    def backward(ctx, grad_output):  # pragma: no cover
+    def backward(ctx, *grad_output):  # pragma: no cover
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
         # retrieve input and output tensor nodes
         if len(ctx.output_t) == 0:
             raise RuntimeError("Trying to perform backward on the InvertibleCheckpointFunction for more than "
-                               "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_passes))
+                               "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_bwd_passes))
         input_t = ctx.input_t.pop()
         output = ctx.output_t.pop()
 
         # recompute input if necessary
         if not ctx.keep_input:
             with torch.no_grad():
-                input_inverted = ctx.fn_inverse(output)
+                input_inverted = ctx.fn_inverse(*output)
+                if not isinstance(input_inverted, tuple):
+                    input_inverted = (input_inverted,)
                 if pytorch_version_one_and_above:
-                    input_t.storage().resize_(int(np.prod(input_t.size())))
-                    input_t.set_(input_inverted)
+                    for element_original, element_inverted in zip(input_t, input_inverted):
+                        element_original.storage().resize_(int(np.prod(element_original.size())))
+                        element_original.set_(element_inverted)
                 else:
-                    input_t.set_(input_inverted)
+                    for element_original, element_inverted in zip(input_t, input_inverted):
+                        element_original.set_(element_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
-            detached_input = input_t.detach().requires_grad_()
-            temp_output = ctx.fn(detached_input)
+            detached_input = tuple([element.detach().requires_grad_() for element in input_t])
+            temp_output = ctx.fn(*detached_input)
+        if not isinstance(temp_output, tuple):
+            temp_output = (temp_output,)
 
-        gradients = torch.autograd.grad(outputs=temp_output, inputs=(detached_input, ) + tuple(ctx.weights), grad_outputs=grad_output)
-        input_t.grad = gradients[0]
-        output.grad = grad_output
+        gradients = torch.autograd.grad(outputs=temp_output, inputs=detached_input + ctx.weights, grad_outputs=grad_output)
 
-        return (gradients[0], None, None, None, None) + gradients[1:]
+        return (None, None, None, None, None) + gradients
 
 
 class InvertibleModuleWrapper(nn.Module):
@@ -119,7 +132,7 @@ class InvertibleModuleWrapper(nn.Module):
         self.num_bwd_passes = num_bwd_passes
         self._fn = fn
 
-    def forward(self, xin):
+    def forward(self,*xin):
         """Forward operation :math:`R(x) = y`
 
         Parameters
@@ -134,19 +147,34 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            y = InvertibleCheckpointFunction.apply(xin, self._fn.forward, self._fn.inverse, self.keep_input, self.num_bwd_passes, *[p for p in self._fn.parameters() if p.requires_grad])
+            if not isinstance(xin, tuple):
+                xin = (xin,)
+            y = InvertibleCheckpointFunction.apply(
+                self._fn.forward,
+                self._fn.inverse,
+                self.keep_input,
+                self.num_bwd_passes,
+                len(xin),
+                *(xin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
             if not self.keep_input:
                 if not pytorch_version_one_and_above:
                     # PyTorch 0.4 way to clear storage
-                    xin.data.set_()
+                    for element in xin:
+                        element.data.set_()
                 else:
                     # PyTorch 1.0+ way to clear storage
-                    xin.storage().resize_(0)
+                    for element in xin:
+                        element.storage().resize_(0)
         else:
-            y = self._fn(xin)
+            y = self._fn(*xin)
+
+        # If the layer only has one input, we unpack the tuple again
+        if isinstance(y, tuple) and len(y) == 1:
+            y = y[0]
+
         return y
 
-    def inverse(self, yin):
+    def inverse(self, *yin):
         """Inverse operation :math:`R^{-1}(y) = x`
 
         Parameters
@@ -161,16 +189,30 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            x = InvertibleCheckpointFunction.apply(yin, self._fn.inverse, self._fn.forward, self.keep_input_inverse, self.num_bwd_passes, *[p for p in self._fn.parameters() if p.requires_grad])
+            if not isinstance(yin, tuple):
+                yin = (yin,)
+            x = InvertibleCheckpointFunction.apply(
+                self._fn.inverse,
+                self._fn.forward,
+                self.keep_input_inverse,
+                self.num_bwd_passes,
+                len(yin),
+                *(yin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
             if not self.keep_input_inverse:
                 if not pytorch_version_one_and_above:
                     # PyTorch 0.4 way to clear storage
-                    yin.data.set_()
+                    for element in yin:
+                        element.data.set_()
                 else:
                     # PyTorch 1.0+ way to clear storage
-                    yin.storage().resize_(0)
+                    for element in yin:
+                        element.storage().resize_(0)
         else:
-            x = self._fn.inverse(yin)
+            x = self._fn.inverse(*yin)
+
+        # If the layer only has one input, we unpack the tuple again
+        if isinstance(x, tuple) and len(x) == 1:
+            x = x[0]
         return x
 
 
