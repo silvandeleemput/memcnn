@@ -7,7 +7,7 @@ from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
 
-
+# TODO attempt to use requires_grad to avoid grad injection
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, *inputs_and_weights):
@@ -19,60 +19,66 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         ctx.num_bwd_passes = num_bwd_passes
         ctx.num_inputs = num_inputs
 
-        input_t = inputs_and_weights[:num_inputs]
-        ctx.input_requires_grad = [element.requires_grad for element in input_t]
+        inputs = inputs_and_weights[:num_inputs]
+        ctx.input_requires_grad = [element.requires_grad for element in inputs]
 
         with torch.no_grad():
             # Makes a detached copy which shares the storage
-            x = [element.detach() for element in input_t]
-            output = ctx.fn(*x)
+            x = [element.detach() for element in inputs]
+            outputs = ctx.fn(*x)
 
-
-        if not isinstance(output, tuple):
-            output = (output,)
+        if not isinstance(outputs, tuple):
+            outputs = (outputs,)
 
         # Detaches y in-place (inbetween computations can now be discarded)
-        detached_output = tuple([element.detach_() for element in output])
+        detached_outputs = tuple([element.detach_() for element in outputs])
 
         # store these tensor nodes for backward pass
-        ctx.input_t = [input_t] * num_bwd_passes
-        ctx.output_t = [detached_output] * num_bwd_passes
+        ctx.inputs = [inputs] * num_bwd_passes
+        ctx.outputs = [detached_outputs] * num_bwd_passes
 
-        return detached_output
+        return detached_outputs
 
     @staticmethod
-    def backward(ctx, *grad_output):  # pragma: no cover
+    def backward(ctx, *grad_outputs):  # pragma: no cover
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
         # retrieve input and output tensor nodes
-        if len(ctx.output_t) == 0:
+        if len(ctx.outputs) == 0:
             raise RuntimeError("Trying to perform backward on the InvertibleCheckpointFunction for more than "
                                "{} times! Try raising `num_bwd_passes` by one.".format(ctx.num_bwd_passes))
-        input_t = ctx.input_t.pop()
-        output = ctx.output_t.pop()
+        inputs = ctx.inputs.pop()
+        outputs = ctx.outputs.pop()
 
         # recompute input if necessary
         if not ctx.keep_input:
             with torch.no_grad():
-                input_inverted = ctx.fn_inverse(*output)
-                if not isinstance(input_inverted, tuple):
-                    input_inverted = (input_inverted,)
+                inputs_inverted = ctx.fn_inverse(*outputs)
+                if not isinstance(inputs_inverted, tuple):
+                    inputs_inverted = (inputs_inverted,)
                 if pytorch_version_one_and_above:
-                    for element_original, element_inverted in zip(input_t, input_inverted):
+                    for element_original, element_inverted in zip(inputs, inputs_inverted):
                         element_original.storage().resize_(int(np.prod(element_original.size())))
                         element_original.set_(element_inverted)
                 else:
-                    for element_original, element_inverted in zip(input_t, input_inverted):
+                    for element_original, element_inverted in zip(inputs, inputs_inverted):
                         element_original.set_(element_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
-            detached_input = tuple([element.detach().requires_grad_() for element in input_t])
-            temp_output = ctx.fn(*detached_input)
+            detached_inputs = tuple([element.detach().requires_grad_() for element in inputs])
+            temp_output = ctx.fn(*detached_inputs)
         if not isinstance(temp_output, tuple):
             temp_output = (temp_output,)
 
-        gradients = torch.autograd.grad(outputs=temp_output, inputs=detached_input + ctx.weights, grad_outputs=grad_output)
+        gradients = torch.autograd.grad(outputs=temp_output, inputs=detached_inputs + ctx.weights, grad_outputs=grad_outputs)
+
+        # Setting the gradients manually on the inputs and outputs (mimic backwards)
+        for element, element_grad in zip(inputs, gradients[:ctx.num_inputs]):
+            element.grad = element_grad
+
+        for element, element_grad in zip(outputs, grad_outputs):
+            element.grad = element_grad
 
         return (None, None, None, None, None) + gradients
 
@@ -132,7 +138,7 @@ class InvertibleModuleWrapper(nn.Module):
         self.num_bwd_passes = num_bwd_passes
         self._fn = fn
 
-    def forward(self,*xin):
+    def forward(self, *xin):
         """Forward operation :math:`R(x) = y`
 
         Parameters
@@ -170,8 +176,7 @@ class InvertibleModuleWrapper(nn.Module):
 
         # If the layer only has one input, we unpack the tuple again
         if isinstance(y, tuple) and len(y) == 1:
-            y = y[0]
-
+            return y[0]
         return y
 
     def inverse(self, *yin):
@@ -212,7 +217,7 @@ class InvertibleModuleWrapper(nn.Module):
 
         # If the layer only has one input, we unpack the tuple again
         if isinstance(x, tuple) and len(x) == 1:
-            x = x[0]
+            return x[0]
         return x
 
 
@@ -303,7 +308,8 @@ def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, imp
         raise NotImplementedError('Unknown coupling method: %s' % coupling)
     return fn
 
-
+# TODO add fixed random_seed
+# TODO add ensure non-zero inputs for testing otherwise resample? (repeat for n times??? / or raise warnings)
 def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.float32, atol=1e-6):
     """Test if a :obj:`torch.nn.Module` is invertible
 
@@ -311,7 +317,7 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     ----------
     module_in : :obj:`torch.nn.Module`
         A torch.nn.Module to test.
-    test_input_shape : :obj:`tuple`
+    test_input_shape : :obj:`tuple` of :obj:`int` or :obj:`tuple` of :obj:`tuple` of :obj:`int`
         Dimensions of test tensor object to perform the test with.
     test_input_dtype : :obj:`torch.dtype`, optional
         Data type of test tensor object to perform the test with.
@@ -326,16 +332,57 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     """
     if isinstance(module_in, InvertibleModuleWrapper):
         module_in = module_in._fn
-    test_input = torch.rand(test_input_shape, dtype=test_input_dtype)
+
     if not hasattr(module_in, "inverse"):
         return False
+
+    def _type_check_input_shape(test_input_shape):
+        if isinstance(test_input_shape, (tuple, list)):
+            if all([isinstance(e, int) for e in test_input_shape]):
+                return True
+            elif all([isinstance(e, (tuple, list)) for e in test_input_shape]):
+                return all([isinstance(ee, int) for e in test_input_shape for ee in e])
+            else:
+                return False
+        else:
+            return False
+
+    if not _type_check_input_shape(test_input_shape):
+        raise ValueError("test_input_shape should be of type Tuple[int, ...] or "
+                         "Tuple[Tuple[int, ...], ...], but {} found".format(type(test_input_shape)))
+
+    if not isinstance(test_input_shape[0], (tuple, list)):
+        test_input_shape = (test_input_shape,)
+
+    def _check_inputs_allclose(inputs, reference, atol):
+        for inp, ref in zip(inputs, reference):
+            if not torch.allclose(inp, ref, atol=atol):
+                return False
+        return True
+
+    def _pack_if_no_tuple(x):
+        if not isinstance(x, tuple):
+            return (x, )
+        return x
+
     with torch.no_grad():
-        if not torch.allclose(module_in.inverse(module_in(test_input)), test_input, atol=atol):
+        test_inputs = tuple([torch.rand(shape, dtype=test_input_dtype) for shape in test_input_shape])
+        if not _check_inputs_allclose(_pack_if_no_tuple(module_in.inverse(*_pack_if_no_tuple(module_in(*test_inputs)))), test_inputs, atol=atol):
             return False
-        if not torch.allclose(module_in(module_in.inverse(test_input)), test_input, atol=atol):
+
+        test_outputs = _pack_if_no_tuple(module_in(*test_inputs))
+        if not _check_inputs_allclose(_pack_if_no_tuple(module_in(*_pack_if_no_tuple(module_in.inverse(*test_outputs)))), test_outputs, atol=atol):
             return False
-        if test_input is module_in(test_input):
-            return False
-        if test_input is module_in.inverse(test_input):
-            return False
+
+    shared = set(test_inputs)
+    shared_outputs = set(test_outputs)
+    if len(test_inputs) != len(shared):
+        warnings.warn("Some inputs share the same tensor, are you sure this is what you want?")
+    if len(test_outputs) != len(shared_outputs):
+        warnings.warn("Some outputs share the same tensor, are you sure this is what you want?")
+    if any([inp in shared for inp in shared_outputs]):
+        warnings.warn("Some inputs and outputs share the same tensor, this is typically not a "
+                      "good function to use with memcnn.InvertibleModuleWrapper as it might increase memory usage. "
+                      "E.g. an identity function.")
+
     return True
