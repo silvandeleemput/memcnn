@@ -6,9 +6,9 @@ import torch.nn
 import numpy as np
 import copy
 from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid, AffineCoupling
-from memcnn import ReversibleBlock
-from memcnn.models.revop import InvertibleModuleWrapper, create_coupling, is_invertible_module
+from memcnn.models.revop import InvertibleModuleWrapper, ReversibleBlock, create_coupling, is_invertible_module
 from memcnn.models.additive import AdditiveCoupling
+from memcnn.models.tests.test_models import MultiplicationInverse, SubModule, SubModuleStack
 
 
 def set_seeds(seed):
@@ -20,71 +20,11 @@ def set_seeds(seed):
     torch.cuda.manual_seed(seed)
 
 
-class SubModule(torch.nn.Module):
-    def __init__(self, in_filters=5, out_filters=5):
-        super(SubModule, self).__init__()
-        self.bn = torch.nn.BatchNorm2d(out_filters)
-        self.conv = torch.nn.Conv2d(in_filters, out_filters, (3, 3), padding=1)
-
-    def forward(self, x):
-        return self.bn(self.conv(x))
-
-
-class SubModuleStack(torch.nn.Module):
-    def __init__(self, Gm, coupling='additive', depth=10, implementation_fwd=-1, implementation_bwd=-1,
-                 keep_input=False, adapter=None, num_bwd_passes=1):
-        super(SubModuleStack, self).__init__()
-        fn = create_coupling(Fm=Gm, Gm=Gm, coupling=coupling, implementation_fwd=implementation_fwd, implementation_bwd=implementation_bwd, adapter=adapter)
-        self.stack = torch.nn.ModuleList(
-            [InvertibleModuleWrapper(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input, num_bwd_passes=num_bwd_passes) for _ in range(depth)]
-        )
-
-    def forward(self, x):
-        for rev_module in self.stack:
-            x = rev_module.forward(x)
-        return x
-
-    def inverse(self, y):
-        for rev_module in reversed(self.stack):
-            y = rev_module.inverse(y)
-        return y
-
-
 def is_memory_cleared(var, isclear, shape):
     if isclear:
         return var.storage().size() == 0
     else:
         return var.storage().size() > 0 and var.shape == shape
-
-
-def test_is_invertible_module():
-    X = torch.zeros(1, 10, 10, 10)
-    assert not is_invertible_module(torch.nn.Conv2d(10, 10, kernel_size=(1, 1)),
-                                    test_input_shape=X.shape)
-    fn = AdditiveCoupling(SubModule(), implementation_bwd=-1, implementation_fwd=-1)
-    assert is_invertible_module(fn, test_input_shape=X.shape)
-    class FakeInverse(torch.nn.Module):
-        def forward(self, x):
-            return x * 4
-
-        def inverse(self, y):
-            return y * 8
-    assert not is_invertible_module(FakeInverse(), test_input_shape=X.shape)
-
-
-def test_is_invertible_module_wrapped():
-    X = torch.zeros(1, 10, 10, 10)
-    assert not is_invertible_module(InvertibleModuleWrapper(torch.nn.Conv2d(10, 10, kernel_size=(1, 1))),
-                                    test_input_shape=X.shape)
-    fn = InvertibleModuleWrapper(AdditiveCoupling(SubModule(), implementation_bwd=-1, implementation_fwd=-1))
-    assert is_invertible_module(fn, test_input_shape=X.shape)
-    class FakeInverse(torch.nn.Module):
-        def forward(self, x):
-            return x * 4
-
-        def inverse(self, y):
-            return y * 8
-    assert not is_invertible_module(InvertibleModuleWrapper(FakeInverse()), test_input_shape=X.shape)
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
@@ -110,53 +50,6 @@ def test_reversible_block_notimplemented(coupling):
             warnings.simplefilter(action='ignore', category=DeprecationWarning)
             ReversibleBlock(fm, coupling='unknown', implementation_bwd=-2, implementation_fwd=0,
                                   adapter=AffineAdapterNaive)
-
-
-class MultiplicationInverse(torch.nn.Module):
-    def __init__(self, factor=2):
-        super(MultiplicationInverse, self).__init__()
-        self.factor = torch.nn.Parameter(torch.ones(1) * factor)
-
-    def forward(self, x):
-        return x * self.factor
-
-    def inverse(self, y):
-        return y / self.factor
-
-
-class IdentityInverse(torch.nn.Module):
-    def __init__(self, multiply_forward=False, multiply_inverse=False):
-        super(IdentityInverse, self).__init__()
-        self.factor = torch.nn.Parameter(torch.ones(1))
-        self.multiply_forward = multiply_forward
-        self.multiply_inverse = multiply_inverse
-
-    def forward(self, x):
-        if self.multiply_forward:
-            return x * self.factor
-        else:
-            return x
-
-    def inverse(self, y):
-        if self.multiply_inverse:
-            return y * self.factor
-        else:
-            return y
-
-
-def test_input_output_invertible_function_share_tensor():
-    fn = IdentityInverse()
-    rm = InvertibleModuleWrapper(fn=fn, keep_input=True, keep_input_inverse=True)
-    X = torch.rand(1, 2, 5, 5, dtype=torch.float32).requires_grad_()
-    assert is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
-    rm.forward(X)
-    fn.multiply_forward = True
-    rm.forward(X)
-    assert is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
-    rm.inverse(X)
-    fn.multiply_inverse = True
-    rm.inverse(X)
-    assert is_invertible_module(fn, test_input_shape=X.shape, atol=1e-6)
 
 
 @pytest.mark.parametrize('fn', [
@@ -272,7 +165,7 @@ def test_chained_invertible_module_wrapper_shared_fwd_and_bwd_train_passes():
     set_seeds(42)
     Gm = SubModule(in_filters=5, out_filters=5)
     rb_temp = SubModuleStack(Gm=Gm, coupling='additive', depth=5, keep_input=True, adapter=None, implementation_bwd=-1,
-                        implementation_fwd=-1)
+                             implementation_fwd=-1)
     optim = torch.optim.SGD(rb_temp.parameters(), lr=0.01)
 
     initial_params = [p.detach().clone() for p in rb_temp.parameters()]

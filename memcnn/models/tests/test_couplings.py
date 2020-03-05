@@ -5,7 +5,8 @@ import copy
 import warnings
 
 from memcnn import create_coupling, InvertibleModuleWrapper
-from memcnn.models.tests.test_revop import set_seeds, SubModule
+from memcnn.models.tests.test_revop import set_seeds
+from memcnn.models.tests.test_models import SubModule
 from memcnn.models.affine import AffineAdapterNaive, AffineBlock
 from memcnn.models.additive import AdditiveBlock
 

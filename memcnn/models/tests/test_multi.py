@@ -35,7 +35,7 @@ def test_multi(disable):
     concat = InvertibleModuleWrapper(ConcatenateChannels(2), disable = disable)
 
     assert is_invertible_module(split, test_input_shape=(1, 3, 32, 32))
-    # assert is_invertible_module(concat, test_input_shape=((1, 3, 32, 32), (1, 3, 32, 32)))
+    assert is_invertible_module(concat, test_input_shape=((1, 2, 32, 32), (1, 1, 32, 32)))
 
     conv_a = torch.nn.Conv2d(2, 2, 3)
     conv_b = torch.nn.Conv2d(1, 1, 3)

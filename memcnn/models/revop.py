@@ -7,7 +7,7 @@ from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
 
-# TODO attempt to use requires_grad to avoid grad injection
+
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, *inputs_and_weights):
@@ -308,9 +308,8 @@ def create_coupling(Fm, Gm=None, coupling='additive', implementation_fwd=-1, imp
         raise NotImplementedError('Unknown coupling method: %s' % coupling)
     return fn
 
-# TODO add fixed random_seed
-# TODO add ensure non-zero inputs for testing otherwise resample? (repeat for n times??? / or raise warnings)
-def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.float32, atol=1e-6):
+
+def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.float32, atol=1e-6, random_seed=42):
     """Test if a :obj:`torch.nn.Module` is invertible
 
     Parameters
@@ -318,11 +317,13 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     module_in : :obj:`torch.nn.Module`
         A torch.nn.Module to test.
     test_input_shape : :obj:`tuple` of :obj:`int` or :obj:`tuple` of :obj:`tuple` of :obj:`int`
-        Dimensions of test tensor object to perform the test with.
+        Dimensions of test tensor(s) object to perform the test with.
     test_input_dtype : :obj:`torch.dtype`, optional
         Data type of test tensor object to perform the test with.
     atol : :obj:`float`, optional
-        Tolerance value used for comparing the outputs
+        Tolerance value used for comparing the outputs.
+    random_seed : :obj:`int`, optional
+        Use this value to seed the pseudo-random test_input_shapes with different numbers.
 
     Returns
     -------
@@ -366,23 +367,36 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
         return x
 
     with torch.no_grad():
+        torch.manual_seed(random_seed)
         test_inputs = tuple([torch.rand(shape, dtype=test_input_dtype) for shape in test_input_shape])
+        if any([torch.equal(torch.zeros_like(e), e) for e in test_inputs]):
+            warnings.warn("Some inputs were detected to be all zeros, you might want to set a different random_seed.")
+
         if not _check_inputs_allclose(_pack_if_no_tuple(module_in.inverse(*_pack_if_no_tuple(module_in(*test_inputs)))), test_inputs, atol=atol):
             return False
 
         test_outputs = _pack_if_no_tuple(module_in(*test_inputs))
+        if any([torch.equal(torch.zeros_like(e), e) for e in test_outputs]):
+            warnings.warn("Some outputs were detected to be all zeros, you might want to set a different random_seed.")
+
         if not _check_inputs_allclose(_pack_if_no_tuple(module_in(*_pack_if_no_tuple(module_in.inverse(*test_outputs)))), test_outputs, atol=atol):
             return False
 
-    shared = set(test_inputs)
-    shared_outputs = set(test_outputs)
-    if len(test_inputs) != len(shared):
-        warnings.warn("Some inputs share the same tensor, are you sure this is what you want?")
-    if len(test_outputs) != len(shared_outputs):
-        warnings.warn("Some outputs share the same tensor, are you sure this is what you want?")
-    if any([inp in shared for inp in shared_outputs]):
-        warnings.warn("Some inputs and outputs share the same tensor, this is typically not a "
-                      "good function to use with memcnn.InvertibleModuleWrapper as it might increase memory usage. "
-                      "E.g. an identity function.")
+        test_reconstructed_inputs = _pack_if_no_tuple(module_in.inverse(*test_outputs))
+ 
+    def _test_shared(inputs, outputs, msg):
+        shared = set(inputs)
+        shared_outputs = set(outputs)
+        if len(inputs) != len(shared):
+            warnings.warn("Some inputs (*x) share the same tensor, are you sure this is what you want? ({})".format(msg))
+        if len(outputs) != len(shared_outputs):
+            warnings.warn("Some outputs (*y) share the same tensor, are you sure this is what you want? ({})".format(msg))
+        if any([inp in shared for inp in shared_outputs]):
+            warnings.warn("Some inputs (*x) and outputs (*y) share the same tensor, this is typically not a "
+                          "good function to use with memcnn.InvertibleModuleWrapper as it might increase memory usage. "
+                          "E.g. an identity function. ({})".format(msg))
+
+    _test_shared(test_inputs, test_outputs, msg="forward")
+    _test_shared(test_reconstructed_inputs, test_outputs, msg="inverse")
 
     return True
