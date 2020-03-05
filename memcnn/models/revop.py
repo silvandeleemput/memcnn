@@ -137,13 +137,13 @@ class InvertibleModuleWrapper(nn.Module):
 
         Parameters
         ----------
-            xin : :obj:`torch.Tensor`
-                Input torch tensor.
+            *xin : :obj:`torch.Tensor` tuple
+                Input torch tensor(s).
 
         Returns
         -------
-            :obj:`torch.Tensor`
-                Output torch tensor y.
+            :obj:`torch.Tensor` tuple
+                Output torch tensor(s) *y.
 
         """
         if not self.disable:
@@ -179,13 +179,13 @@ class InvertibleModuleWrapper(nn.Module):
 
         Parameters
         ----------
-            yin : :obj:`torch.Tensor`
-                Input torch tensor.
+            *yin : :obj:`torch.Tensor` tuple
+                Input torch tensor(s).
 
         Returns
         -------
-            :obj:`torch.Tensor`
-                Output torch tensor x.
+            :obj:`torch.Tensor` tuple
+                Output torch tensor(s) *x.
 
         """
         if not self.disable:
