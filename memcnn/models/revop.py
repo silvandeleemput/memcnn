@@ -383,7 +383,7 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
             return False
 
         test_reconstructed_inputs = _pack_if_no_tuple(module_in.inverse(*test_outputs))
- 
+
     def _test_shared(inputs, outputs, msg):
         shared = set(inputs)
         shared_outputs = set(outputs)

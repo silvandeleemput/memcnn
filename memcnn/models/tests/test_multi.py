@@ -1,32 +1,7 @@
 import pytest
 import torch
 from memcnn.models.revop import InvertibleModuleWrapper, is_invertible_module
-
-
-class SplitChannels(torch.nn.Module):
-    def __init__(self, split_location):
-        self.split_location = split_location
-        super(SplitChannels, self).__init__()
-
-    def forward(self, x):
-        return (x[:, :self.split_location, :].clone(),
-                x[:, self.split_location:, :].clone())
-
-    def inverse(self, x, y):
-        return torch.cat([x, y], dim=1)
-
-
-class ConcatenateChannels(torch.nn.Module):
-    def __init__(self, split_location):
-        self.split_location = split_location
-        super(ConcatenateChannels, self).__init__()
-
-    def forward(self, x, y):
-        return torch.cat([x, y], dim=1)
-
-    def inverse(self, x):
-        return (x[:, :self.split_location, :].clone(),
-                x[:, self.split_location:, :].clone())
+from memcnn.models.tests.test_models import SplitChannels, ConcatenateChannels
 
 
 @pytest.mark.parametrize('disable', [True, False])

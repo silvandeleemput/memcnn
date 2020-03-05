@@ -74,3 +74,29 @@ class SubModuleStack(torch.nn.Module):
         for rev_module in reversed(self.stack):
             y = rev_module.inverse(y)
         return y
+
+
+class SplitChannels(torch.nn.Module):
+    def __init__(self, split_location):
+        self.split_location = split_location
+        super(SplitChannels, self).__init__()
+
+    def forward(self, x):
+        return (x[:, :self.split_location, :].clone(),
+                x[:, self.split_location:, :].clone())
+
+    def inverse(self, x, y):
+        return torch.cat([x, y], dim=1)
+
+
+class ConcatenateChannels(torch.nn.Module):
+    def __init__(self, split_location):
+        self.split_location = split_location
+        super(ConcatenateChannels, self).__init__()
+
+    def forward(self, x, y):
+        return torch.cat([x, y], dim=1)
+
+    def inverse(self, x):
+        return (x[:, :self.split_location, :].clone(),
+                x[:, self.split_location:, :].clone())
