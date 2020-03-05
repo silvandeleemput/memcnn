@@ -369,17 +369,17 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     with torch.no_grad():
         torch.manual_seed(random_seed)
         test_inputs = tuple([torch.rand(shape, dtype=test_input_dtype) for shape in test_input_shape])
-        if any([torch.equal(torch.zeros_like(e), e) for e in test_inputs]):
+        if any([torch.equal(torch.zeros_like(e), e) for e in test_inputs]):  # pragma: no cover
             warnings.warn("Some inputs were detected to be all zeros, you might want to set a different random_seed.")
 
         if not _check_inputs_allclose(_pack_if_no_tuple(module_in.inverse(*_pack_if_no_tuple(module_in(*test_inputs)))), test_inputs, atol=atol):
             return False
 
         test_outputs = _pack_if_no_tuple(module_in(*test_inputs))
-        if any([torch.equal(torch.zeros_like(e), e) for e in test_outputs]):
+        if any([torch.equal(torch.zeros_like(e), e) for e in test_outputs]):  # pragma: no cover
             warnings.warn("Some outputs were detected to be all zeros, you might want to set a different random_seed.")
 
-        if not _check_inputs_allclose(_pack_if_no_tuple(module_in(*_pack_if_no_tuple(module_in.inverse(*test_outputs)))), test_outputs, atol=atol):
+        if not _check_inputs_allclose(_pack_if_no_tuple(module_in(*_pack_if_no_tuple(module_in.inverse(*test_outputs)))), test_outputs, atol=atol):  # pragma: no cover
             return False
 
         test_reconstructed_inputs = _pack_if_no_tuple(module_in.inverse(*test_outputs))
@@ -387,7 +387,7 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     def _test_shared(inputs, outputs, msg):
         shared = set(inputs)
         shared_outputs = set(outputs)
-        if len(inputs) != len(shared):
+        if len(inputs) != len(shared):  # pragma: no cover
             warnings.warn("Some inputs (*x) share the same tensor, are you sure this is what you want? ({})".format(msg))
         if len(outputs) != len(shared_outputs):
             warnings.warn("Some outputs (*y) share the same tensor, are you sure this is what you want? ({})".format(msg))
