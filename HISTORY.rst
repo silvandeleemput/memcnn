@@ -2,6 +2,15 @@
 History
 =======
 
+1.3.2 (2020-03-05)
+------------------
+* Improved InvertibleModuleWrapper
+  * Added support for multi input/output invertible operations! Big thanks to Christian Etmann for the PR.
+* Improved the is_invertible_module test
+  * Added multi input/output checks
+  * Fixed random seed per default
+  * Additional warning checks have been added
+
 1.3.1 (2020-03-02)
 ------------------
 * HOTFIX InvertibleCheckpointFunction uses ref_count for inputs as well to avoid memory spikes

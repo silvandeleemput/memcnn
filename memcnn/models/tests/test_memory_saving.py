@@ -3,7 +3,7 @@ import gc
 import numpy as np
 import torch
 import torch.nn
-from memcnn.models.tests.test_revop import SubModuleStack, SubModule
+from memcnn.models.tests.test_models import SubModule, SubModuleStack
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
