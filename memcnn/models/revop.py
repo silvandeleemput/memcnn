@@ -33,6 +33,17 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         # Detaches y in-place (inbetween computations can now be discarded)
         detached_outputs = tuple([element.detach_() for element in outputs])
 
+        # clear memory from inputs
+        if not ctx.keep_input:
+            if not pytorch_version_one_and_above:
+                # PyTorch 0.4 way to clear storage
+                for element in inputs:
+                    element.data.set_()
+            else:
+                # PyTorch 1.0+ way to clear storage
+                for element in inputs:
+                    element.storage().resize_(0)
+
         # store these tensor nodes for backward pass
         ctx.inputs = [inputs] * num_bwd_passes
         ctx.outputs = [detached_outputs] * num_bwd_passes
@@ -153,8 +164,6 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            if not isinstance(xin, tuple):
-                xin = (xin,)
             y = InvertibleCheckpointFunction.apply(
                 self._fn.forward,
                 self._fn.inverse,
@@ -162,15 +171,6 @@ class InvertibleModuleWrapper(nn.Module):
                 self.num_bwd_passes,
                 len(xin),
                 *(xin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
-            if not self.keep_input:
-                if not pytorch_version_one_and_above:
-                    # PyTorch 0.4 way to clear storage
-                    for element in xin:
-                        element.data.set_()
-                else:
-                    # PyTorch 1.0+ way to clear storage
-                    for element in xin:
-                        element.storage().resize_(0)
         else:
             y = self._fn(*xin)
 
@@ -194,8 +194,6 @@ class InvertibleModuleWrapper(nn.Module):
 
         """
         if not self.disable:
-            if not isinstance(yin, tuple):
-                yin = (yin,)
             x = InvertibleCheckpointFunction.apply(
                 self._fn.inverse,
                 self._fn.forward,
@@ -203,15 +201,6 @@ class InvertibleModuleWrapper(nn.Module):
                 self.num_bwd_passes,
                 len(yin),
                 *(yin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
-            if not self.keep_input_inverse:
-                if not pytorch_version_one_and_above:
-                    # PyTorch 0.4 way to clear storage
-                    for element in yin:
-                        element.data.set_()
-                else:
-                    # PyTorch 1.0+ way to clear storage
-                    for element in yin:
-                        element.storage().resize_(0)
         else:
             x = self._fn.inverse(*yin)
 

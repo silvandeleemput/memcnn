@@ -37,10 +37,12 @@ class IdentityInverse(torch.nn.Module):
 
 
 class MultiSharedOutputs(torch.nn.Module):
+    # pylint: disable=R0201
     def forward(self, x):
         y = x * x
         return y, y
 
+    # pylint: disable=R0201
     def inverse(self, y, y2):
         x = torch.max(torch.sqrt(y), torch.sqrt(y2))
         return x
@@ -85,6 +87,7 @@ class SplitChannels(torch.nn.Module):
         return (x[:, :self.split_location, :].clone(),
                 x[:, self.split_location:, :].clone())
 
+    # pylint: disable=R0201
     def inverse(self, x, y):
         return torch.cat([x, y], dim=1)
 
@@ -94,6 +97,7 @@ class ConcatenateChannels(torch.nn.Module):
         self.split_location = split_location
         super(ConcatenateChannels, self).__init__()
 
+    # pylint: disable=R0201
     def forward(self, x, y):
         return torch.cat([x, y], dim=1)
 
