@@ -224,6 +224,7 @@ Works using MemCNN
 * `MemCNN: a Framework for Developing Memory Efficient Deep Invertible Networks <https://openreview.net/forum?id=r1KzqK1wz>`__ by Sil C. van de Leemput et al.
 * `Reversible GANs for Memory-efficient Image-to-Image Translation <https://arxiv.org/abs/1902.02729>`__ by Tycho van der Ouderaa et al.
 * `Chest CT Super-resolution and Domain-adaptation using Memory-efficient 3D Reversible GANs <https://openreview.net/forum?id=SkxueFsiFV>`__ by Tycho van der Ouderaa et al.
+* `iUNets: Fully invertible U-Nets with Learnable Up- and Downsampling <https://arxiv.org/abs/2005.05220>`__ by Christian Etmann et al.
 
 Citation
 --------
