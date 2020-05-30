@@ -10,7 +10,8 @@ from memcnn.models.utils import pytorch_version_one_and_above
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, *inputs_and_weights):
+    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, allow_unused_gradients,
+                *inputs_and_weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
@@ -18,6 +19,7 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         ctx.weights = inputs_and_weights[num_inputs:]
         ctx.num_bwd_passes = num_bwd_passes
         ctx.num_inputs = num_inputs
+        ctx.allow_unused_gradients = allow_unused_gradients
 
         inputs = inputs_and_weights[:num_inputs]
         ctx.input_requires_grad = [element.requires_grad for element in inputs]
@@ -82,7 +84,8 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         if not isinstance(temp_output, tuple):
             temp_output = (temp_output,)
 
-        gradients = torch.autograd.grad(outputs=temp_output, inputs=detached_inputs + ctx.weights, grad_outputs=grad_outputs)
+        gradients = torch.autograd.grad(outputs=temp_output, inputs=detached_inputs + ctx.weights,
+                                        grad_outputs=grad_outputs, allow_unused=ctx.allow_unused_gradients)
 
         # Setting the gradients manually on the inputs and outputs (mimic backwards)
         for element, element_grad in zip(inputs, gradients[:ctx.num_inputs]):
@@ -91,11 +94,12 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         for element, element_grad in zip(outputs, grad_outputs):
             element.grad = element_grad
 
-        return (None, None, None, None, None) + gradients
+        return (None, None, None, None, None, None) + gradients
 
 
 class InvertibleModuleWrapper(nn.Module):
-    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1, disable=False):
+    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1, disable=False,
+                 allow_unused_gradients=False):
         """
         The InvertibleModuleWrapper which enables memory savings during training by exploiting
         the invertible properties of the wrapped module.
@@ -126,6 +130,10 @@ class InvertibleModuleWrapper(nn.Module):
                 Essentially this renders the function as `y = fn(x)` without any of the memory savings.
                 Setting this to true will also ignore the keep_input and keep_input_inverse properties.
 
+            allow_unused_gradients : :obj:`int`, optional
+                Give permission to pytorch to not return gradients for given tensors. Enabling it allows unused layers,
+                parameters and tensors in modules.
+
         Attributes
         ----------
             keep_input : :obj:`bool`, optional
@@ -147,6 +155,7 @@ class InvertibleModuleWrapper(nn.Module):
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
         self.num_bwd_passes = num_bwd_passes
+        self.allow_unused_gradients = allow_unused_gradients
         self._fn = fn
 
     def forward(self, *xin):
@@ -170,6 +179,7 @@ class InvertibleModuleWrapper(nn.Module):
                 self.keep_input,
                 self.num_bwd_passes,
                 len(xin),
+                self.allow_unused_gradients,
                 *(xin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
         else:
             y = self._fn(*xin)
@@ -200,6 +210,7 @@ class InvertibleModuleWrapper(nn.Module):
                 self.keep_input_inverse,
                 self.num_bwd_passes,
                 len(yin),
+                self.allow_unused_gradients,
                 *(yin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
         else:
             x = self._fn.inverse(*yin)
