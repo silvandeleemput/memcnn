@@ -10,7 +10,7 @@ from memcnn.models.utils import pytorch_version_one_and_above
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, *inputs_and_weights):
+    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, preserve_rng_state, *inputs_and_weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
@@ -18,6 +18,17 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         ctx.weights = inputs_and_weights[num_inputs:]
         ctx.num_bwd_passes = num_bwd_passes
         ctx.num_inputs = num_inputs
+        ctx.preserve_rng_state = preserve_rng_state
+        if preserve_rng_state:
+            ctx.fwd_cpu_state = torch.get_rng_state()
+            # Don't eagerly initialize the cuda context by accident.
+            # (If the user intends that the context is initialized later, within their
+            # run_function, we SHOULD actually stash the cuda state here.  Unfortunately,
+            # we have no way to anticipate this will happen before we run the function.)
+            ctx.had_cuda_in_fwd = False
+            if torch.cuda._initialized:
+                ctx.had_cuda_in_fwd = True
+                ctx.fwd_gpu_devices, ctx.fwd_gpu_states = get_device_states(*inputs_and_weights)
 
         inputs = inputs_and_weights[:num_inputs]
         ctx.input_requires_grad = [element.requires_grad for element in inputs]
@@ -63,17 +74,28 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
 
         # recompute input if necessary
         if not ctx.keep_input:
-            with torch.no_grad():
-                inputs_inverted = ctx.fn_inverse(*outputs)
-                if not isinstance(inputs_inverted, tuple):
-                    inputs_inverted = (inputs_inverted,)
-                if pytorch_version_one_and_above:
-                    for element_original, element_inverted in zip(inputs, inputs_inverted):
-                        element_original.storage().resize_(int(np.prod(element_original.size())))
-                        element_original.set_(element_inverted)
-                else:
-                    for element_original, element_inverted in zip(inputs, inputs_inverted):
-                        element_original.set_(element_inverted)
+            # Stash the surrounding rng state, and mimic the state that was
+            # present at this time during forward.  Restore the surrounding state
+            # when we're done.
+            rng_devices = []
+            if ctx.preserve_rng_state and ctx.had_cuda_in_fwd:
+                rng_devices = ctx.fwd_gpu_devices
+            with torch.random.fork_rng(devices=rng_devices, enabled=ctx.preserve_rng_state):
+                if ctx.preserve_rng_state:
+                    torch.set_rng_state(ctx.fwd_cpu_state)
+                    if ctx.had_cuda_in_fwd:
+                        set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
+                with torch.no_grad():
+                    inputs_inverted = ctx.fn_inverse(*outputs)
+                    if not isinstance(inputs_inverted, tuple):
+                        inputs_inverted = (inputs_inverted,)
+                    if pytorch_version_one_and_above:
+                        for element_original, element_inverted in zip(inputs, inputs_inverted):
+                            element_original.storage().resize_(int(np.prod(element_original.size())))
+                            element_original.set_(element_inverted)
+                    else:
+                        for element_original, element_inverted in zip(inputs, inputs_inverted):
+                            element_original.set_(element_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
@@ -91,11 +113,12 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         for element, element_grad in zip(outputs, grad_outputs):
             element.grad = element_grad
 
-        return (None, None, None, None, None) + gradients
+        return (None, None, None, None, None, None) + gradients
 
 
 class InvertibleModuleWrapper(nn.Module):
-    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1, disable=False):
+    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1,
+                 disable=False, preserve_rng_state=True):
         """
         The InvertibleModuleWrapper which enables memory savings during training by exploiting
         the invertible properties of the wrapped module.
@@ -126,6 +149,11 @@ class InvertibleModuleWrapper(nn.Module):
                 Essentially this renders the function as `y = fn(x)` without any of the memory savings.
                 Setting this to true will also ignore the keep_input and keep_input_inverse properties.
 
+            preserve_rng_state : :obj:`bool`, optional
+                Setting this will ensure that the same RNG state is used during reconstruction of the inputs.
+                I.e. if keep_input = False on forward or keep_input_inverse = False on inverse. By default
+                this is True.
+
         Attributes
         ----------
             keep_input : :obj:`bool`, optional
@@ -147,6 +175,7 @@ class InvertibleModuleWrapper(nn.Module):
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
         self.num_bwd_passes = num_bwd_passes
+        self.preserve_rng_state = preserve_rng_state
         self._fn = fn
 
     def forward(self, *xin):
@@ -169,6 +198,7 @@ class InvertibleModuleWrapper(nn.Module):
                 self._fn.inverse,
                 self.keep_input,
                 self.num_bwd_passes,
+                self.preserve_rng_state,
                 len(xin),
                 *(xin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
         else:
@@ -199,6 +229,7 @@ class InvertibleModuleWrapper(nn.Module):
                 self._fn.forward,
                 self.keep_input_inverse,
                 self.num_bwd_passes,
+                self.preserve_rng_state,
                 len(yin),
                 *(yin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
         else:
