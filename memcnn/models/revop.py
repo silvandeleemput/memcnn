@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import warnings
 import numpy as np
 import torch
 import torch.nn as nn
-import warnings
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
@@ -10,16 +10,28 @@ from memcnn.models.utils import pytorch_version_one_and_above
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, *inputs_and_weights):
+    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, preserve_rng_state, num_inputs, *inputs_and_weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
         ctx.keep_input = keep_input
         ctx.weights = inputs_and_weights[num_inputs:]
         ctx.num_bwd_passes = num_bwd_passes
+        ctx.preserve_rng_state = preserve_rng_state
         ctx.num_inputs = num_inputs
-
         inputs = inputs_and_weights[:num_inputs]
+
+        if preserve_rng_state:
+            ctx.fwd_cpu_state = torch.get_rng_state()
+            # Don't eagerly initialize the cuda context by accident.
+            # (If the user intends that the context is initialized later, within their
+            # run_function, we SHOULD actually stash the cuda state here.  Unfortunately,
+            # we have no way to anticipate this will happen before we run the function.)
+            ctx.had_cuda_in_fwd = False
+            if torch.cuda._initialized:
+                ctx.had_cuda_in_fwd = True
+                ctx.fwd_gpu_devices, ctx.fwd_gpu_states = get_device_states(*inputs)
+
         ctx.input_requires_grad = [element.requires_grad for element in inputs]
 
         with torch.no_grad():
@@ -63,17 +75,29 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
 
         # recompute input if necessary
         if not ctx.keep_input:
-            with torch.no_grad():
-                inputs_inverted = ctx.fn_inverse(*outputs)
-                if not isinstance(inputs_inverted, tuple):
-                    inputs_inverted = (inputs_inverted,)
-                if pytorch_version_one_and_above:
-                    for element_original, element_inverted in zip(inputs, inputs_inverted):
-                        element_original.storage().resize_(int(np.prod(element_original.size())))
-                        element_original.set_(element_inverted)
-                else:
-                    for element_original, element_inverted in zip(inputs, inputs_inverted):
-                        element_original.set_(element_inverted)
+            # Stash the surrounding rng state, and mimic the state that was
+            # present at this time during forward.  Restore the surrounding state
+            # when we're done.
+            rng_devices = []
+            if ctx.preserve_rng_state and ctx.had_cuda_in_fwd:
+                rng_devices = ctx.fwd_gpu_devices
+            with torch.random.fork_rng(devices=rng_devices, enabled=ctx.preserve_rng_state):
+                if ctx.preserve_rng_state:
+                    torch.set_rng_state(ctx.fwd_cpu_state)
+                    if ctx.had_cuda_in_fwd:
+                        set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
+                # recompute input
+                with torch.no_grad():
+                    inputs_inverted = ctx.fn_inverse(*outputs)
+                    if not isinstance(inputs_inverted, tuple):
+                        inputs_inverted = (inputs_inverted,)
+                    if pytorch_version_one_and_above:
+                        for element_original, element_inverted in zip(inputs, inputs_inverted):
+                            element_original.storage().resize_(int(np.prod(element_original.size())))
+                            element_original.set_(element_inverted)
+                    else:
+                        for element_original, element_inverted in zip(inputs, inputs_inverted):
+                            element_original.set_(element_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
@@ -91,11 +115,12 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         for element, element_grad in zip(outputs, grad_outputs):
             element.grad = element_grad
 
-        return (None, None, None, None, None) + gradients
+        return (None, None, None, None, None, None) + gradients
 
 
 class InvertibleModuleWrapper(nn.Module):
-    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1, disable=False):
+    def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1,
+                 disable=False, preserve_rng_state=False):
         """
         The InvertibleModuleWrapper which enables memory savings during training by exploiting
         the invertible properties of the wrapped module.
@@ -122,9 +147,15 @@ class InvertibleModuleWrapper(nn.Module):
                 Hence, The typical use case is to keep this at 1, until it raises an error for raising this value.
 
             disable : :obj:`bool`, optional
-                This will disable the detached graph approach with the backward hook.
+                This will disable using the InvertibleCheckpointFunction altogether.
                 Essentially this renders the function as `y = fn(x)` without any of the memory savings.
                 Setting this to true will also ignore the keep_input and keep_input_inverse properties.
+
+            preserve_rng_state : :obj:`bool`, optional
+                Setting this will ensure that the same RNG state is used during reconstruction of the inputs.
+                I.e. if keep_input = False on forward or keep_input_inverse = False on inverse. By default
+                this is False since most invertible modules should have a valid inverse and hence are
+                deterministic.
 
         Attributes
         ----------
@@ -136,17 +167,13 @@ class InvertibleModuleWrapper(nn.Module):
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
 
-        Raises
-        ------
-        NotImplementedError
-            If an unknown coupling or implementation is given.
-
         """
         super(InvertibleModuleWrapper, self).__init__()
         self.disable = disable
         self.keep_input = keep_input
         self.keep_input_inverse = keep_input_inverse
         self.num_bwd_passes = num_bwd_passes
+        self.preserve_rng_state = preserve_rng_state
         self._fn = fn
 
     def forward(self, *xin):
@@ -169,6 +196,7 @@ class InvertibleModuleWrapper(nn.Module):
                 self._fn.inverse,
                 self.keep_input,
                 self.num_bwd_passes,
+                self.preserve_rng_state,
                 len(xin),
                 *(xin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
         else:
@@ -199,6 +227,7 @@ class InvertibleModuleWrapper(nn.Module):
                 self._fn.forward,
                 self.keep_input_inverse,
                 self.num_bwd_passes,
+                self.preserve_rng_state,
                 len(yin),
                 *(yin + tuple([p for p in self._fn.parameters() if p.requires_grad])))
         else:
@@ -389,3 +418,33 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     _test_shared(test_reconstructed_inputs, test_outputs, msg="inverse")
 
     return True
+
+
+# We can't know if the run_fn will internally move some args to different devices,
+# which would require logic to preserve rng states for those devices as well.
+# We could paranoically stash and restore ALL the rng states for all visible devices,
+# but that seems very wasteful for most cases.  Compromise:  Stash the RNG state for
+# the device of all Tensor args.
+#
+# To consider:  maybe get_device_states and set_device_states should reside in torch/random.py?
+#
+# get_device_states and set_device_states cannot be imported from torch.utils.checkpoint, since it was not
+# present in older versions, so we include a copy here.
+def get_device_states(*args):
+    # This will not error out if "arg" is a CPU tensor or a non-tensor type because
+    # the conditionals short-circuit.
+    fwd_gpu_devices = list(set(arg.get_device() for arg in args
+                               if isinstance(arg, torch.Tensor) and arg.is_cuda))
+
+    fwd_gpu_states = []
+    for device in fwd_gpu_devices:
+        with torch.cuda.device(device):
+            fwd_gpu_states.append(torch.cuda.get_rng_state())
+
+    return fwd_gpu_devices, fwd_gpu_states
+
+
+def set_device_states(devices, states):
+    for device, state in zip(devices, states):
+        with torch.cuda.device(device):
+            torch.cuda.set_rng_state(state)
