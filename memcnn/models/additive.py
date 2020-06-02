@@ -6,7 +6,7 @@ from torch import set_grad_enabled
 
 
 class AdditiveCoupling(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1, chunk_dim=1):
+    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1, split_dim=1):
         """
         This computes the output :math:`y` on forward given input :math:`x` and arbitrary modules :math:`Fm` and :math:`Gm` according to:
 
@@ -33,7 +33,7 @@ class AdditiveCoupling(nn.Module):
             implementation_bwd : :obj:`int`
                 Switch between different Additive Operation implementations for inverse pass. Default = -1
 
-            chunk_dim : :obj:`int`
+            split_dim : :obj:`int`
                 Dimension used when chunking input tensors. Default = 1
 
         """
@@ -45,7 +45,7 @@ class AdditiveCoupling(nn.Module):
         self.Fm = Fm
         self.implementation_fwd = implementation_fwd
         self.implementation_bwd = implementation_bwd
-        self.chunk_dim = chunk_dim
+        self.split_dim = split_dim
         if implementation_bwd != -1 or implementation_fwd != -1:
             warnings.warn("Other implementations than the default (-1) are now deprecated.",
                           DeprecationWarning)
@@ -58,7 +58,7 @@ class AdditiveCoupling(nn.Module):
         elif self.implementation_fwd == 1:
             out = AdditiveBlockFunction2.apply(*args)
         elif self.implementation_fwd == -1:
-            x1, x2 = torch.chunk(x, 2, dim=self.chunk_dim)
+            x1, x2 = torch.chunk(x, 2, dim=self.split_dim)
             x1, x2 = x1.contiguous(), x2.contiguous()
             fmd = self.Fm.forward(x2)
             y1 = x1 + fmd
@@ -78,7 +78,7 @@ class AdditiveCoupling(nn.Module):
         elif self.implementation_bwd == 1:
             x = AdditiveBlockInverseFunction2.apply(*args)
         elif self.implementation_bwd == -1:
-            y1, y2 = torch.chunk(y, 2, dim=self.chunk_dim)
+            y1, y2 = torch.chunk(y, 2, dim=self.split_dim)
             y1, y2 = y1.contiguous(), y2.contiguous()
             gmd = self.Gm.forward(y1)
             x2 = y2 - gmd
