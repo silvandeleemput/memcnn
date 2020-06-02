@@ -112,7 +112,7 @@ class AffineCoupling(nn.Module):
             y1 = (x1 * fmr1) + fmr2
             gmr1, gmr2 = self.Gm.forward(y1)
             y2 = (x2 * gmr1) + gmr2
-            out = torch.cat([y1, y2], dim=1)
+            out = torch.cat([y1, y2], dim=self.split_dim)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -132,7 +132,7 @@ class AffineCoupling(nn.Module):
             x2 = (y2 - gmr2) / gmr1
             fmr1, fmr2 = self.Fm.forward(x2)
             x1 = (y1 - fmr2) / fmr1
-            x = torch.cat([x1, x2], dim=1)
+            x = torch.cat([x1, x2], dim=self.split_dim)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))

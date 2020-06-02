@@ -64,7 +64,7 @@ class AdditiveCoupling(nn.Module):
             y1 = x1 + fmd
             gmd = self.Gm.forward(y1)
             y2 = x2 + gmd
-            out = torch.cat([y1, y2], dim=1)
+            out = torch.cat([y1, y2], dim=self.split_dim)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -84,7 +84,7 @@ class AdditiveCoupling(nn.Module):
             x2 = y2 - gmd
             fmd = self.Fm.forward(x2)
             x1 = y1 - fmd
-            x = torch.cat([x1, x2], dim=1)
+            x = torch.cat([x1, x2], dim=self.split_dim)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))
