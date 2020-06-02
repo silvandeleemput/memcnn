@@ -120,7 +120,7 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
 
 class InvertibleModuleWrapper(nn.Module):
     def __init__(self, fn, keep_input=False, keep_input_inverse=False, num_bwd_passes=1,
-                 disable=False, preserve_rng_state=True):
+                 disable=False, preserve_rng_state=False):
         """
         The InvertibleModuleWrapper which enables memory savings during training by exploiting
         the invertible properties of the wrapped module.
@@ -147,14 +147,15 @@ class InvertibleModuleWrapper(nn.Module):
                 Hence, The typical use case is to keep this at 1, until it raises an error for raising this value.
 
             disable : :obj:`bool`, optional
-                This will disable the detached graph approach with the backward hook.
+                This will disable using the InvertibleCheckpointFunction altogether.
                 Essentially this renders the function as `y = fn(x)` without any of the memory savings.
                 Setting this to true will also ignore the keep_input and keep_input_inverse properties.
 
             preserve_rng_state : :obj:`bool`, optional
                 Setting this will ensure that the same RNG state is used during reconstruction of the inputs.
                 I.e. if keep_input = False on forward or keep_input_inverse = False on inverse. By default
-                this is True.
+                this is False since most invertible modules should have a valid inverse and hence are
+                deterministic.
 
         Attributes
         ----------
@@ -165,11 +166,6 @@ class InvertibleModuleWrapper(nn.Module):
             keep_input_inverse : :obj:`bool`, optional
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
-
-        Raises
-        ------
-        NotImplementedError
-            If an unknown coupling or implementation is given.
 
         """
         super(InvertibleModuleWrapper, self).__init__()
