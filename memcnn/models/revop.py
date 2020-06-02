@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import warnings
 import numpy as np
 import torch
 import torch.nn as nn
-import warnings
+from torch.utils.checkpoint import set_device_states, get_device_states
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
@@ -10,15 +11,17 @@ from memcnn.models.utils import pytorch_version_one_and_above
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, num_inputs, preserve_rng_state, *inputs_and_weights):
+    def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, preserve_rng_state, num_inputs, *inputs_and_weights):
         # store in context
         ctx.fn = fn
         ctx.fn_inverse = fn_inverse
         ctx.keep_input = keep_input
         ctx.weights = inputs_and_weights[num_inputs:]
         ctx.num_bwd_passes = num_bwd_passes
-        ctx.num_inputs = num_inputs
         ctx.preserve_rng_state = preserve_rng_state
+        ctx.num_inputs = num_inputs
+        inputs = inputs_and_weights[:num_inputs]
+
         if preserve_rng_state:
             ctx.fwd_cpu_state = torch.get_rng_state()
             # Don't eagerly initialize the cuda context by accident.
@@ -28,9 +31,8 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
             ctx.had_cuda_in_fwd = False
             if torch.cuda._initialized:
                 ctx.had_cuda_in_fwd = True
-                ctx.fwd_gpu_devices, ctx.fwd_gpu_states = get_device_states(*inputs_and_weights)
+                ctx.fwd_gpu_devices, ctx.fwd_gpu_states = get_device_states(*inputs)
 
-        inputs = inputs_and_weights[:num_inputs]
         ctx.input_requires_grad = [element.requires_grad for element in inputs]
 
         with torch.no_grad():
@@ -85,6 +87,7 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
                     torch.set_rng_state(ctx.fwd_cpu_state)
                     if ctx.had_cuda_in_fwd:
                         set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
+                # recompute input
                 with torch.no_grad():
                     inputs_inverted = ctx.fn_inverse(*outputs)
                     if not isinstance(inputs_inverted, tuple):
