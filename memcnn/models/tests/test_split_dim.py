@@ -19,11 +19,11 @@ class Check(torch.nn.Module):
 
 @pytest.mark.parametrize('dimension', [None, 1, 2])
 @pytest.mark.parametrize('coupling', [AdditiveCoupling, AffineCoupling])
-def test_resnet(dimension: int, coupling: Union[AdditiveCoupling, AffineCoupling]):
+def test_split_dim(dimension: int, coupling: Union[AdditiveCoupling, AffineCoupling]):
     dim = 1 if dimension is None else dimension
     module = Check(dim, 2)
     model = (coupling(module) if dimension is None
              else coupling(module, split_dim=dimension))
     model = InvertibleModuleWrapper(model)
     inp = torch.randn((2, 4, 4), requires_grad=False)
-    out = model(inp)
+    model(inp)
