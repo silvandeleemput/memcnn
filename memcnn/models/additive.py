@@ -34,7 +34,7 @@ class AdditiveCoupling(nn.Module):
                 Switch between different Additive Operation implementations for inverse pass. Default = -1
 
             split_dim : :obj:`int`
-                Dimension used when chunking input tensors. Default = 1
+                Dimension to split the input tensors on. Default = 1, generally corresponding to channels.
 
         """
         super(AdditiveCoupling, self).__init__()

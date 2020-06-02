@@ -12,14 +12,14 @@ class Check(torch.nn.Module):
         self.dim = dim
         self.target_size = target_size
 
-    def forward(self, fn_input: torch.Tensor) -> torch.Tensor:
+    def forward(self, fn_input):
         assert fn_input.size(self.dim) == self.target_size
         return fn_input
 
 
 @pytest.mark.parametrize('dimension', [None, 1, 2])
 @pytest.mark.parametrize('coupling', [AdditiveCoupling, AffineCoupling])
-def test_split_dim(dimension: int, coupling: Union[AdditiveCoupling, AffineCoupling]):
+def test_split_dim(dimension, coupling):
     dim = 1 if dimension is None else dimension
     module = Check(dim, 2)
     model = (coupling(module) if dimension is None

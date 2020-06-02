@@ -82,7 +82,7 @@ class AffineCoupling(nn.Module):
                 Switch between different Affine Operation implementations for inverse pass. Default = -1
 
             split_dim : :obj:`int`
-                Dimension used when chunking input tensors. Default = 1
+                Dimension to split the input tensors on. Default = 1, generally corresponding to channels.
         """
         super(AffineCoupling, self).__init__()
         # mirror the passed module, without parameter sharing...
