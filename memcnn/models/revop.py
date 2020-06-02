@@ -3,7 +3,6 @@ import warnings
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.checkpoint import set_device_states, get_device_states
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 from memcnn.models.utils import pytorch_version_one_and_above
@@ -423,3 +422,33 @@ def is_invertible_module(module_in, test_input_shape, test_input_dtype=torch.flo
     _test_shared(test_reconstructed_inputs, test_outputs, msg="inverse")
 
     return True
+
+
+# We can't know if the run_fn will internally move some args to different devices,
+# which would require logic to preserve rng states for those devices as well.
+# We could paranoically stash and restore ALL the rng states for all visible devices,
+# but that seems very wasteful for most cases.  Compromise:  Stash the RNG state for
+# the device of all Tensor args.
+#
+# To consider:  maybe get_device_states and set_device_states should reside in torch/random.py?
+#
+# get_device_states and set_device_states cannot be imported from torch.utils.checkpoint, since it was not
+# present in older versions, so we include a copy here.
+def get_device_states(*args):
+    # This will not error out if "arg" is a CPU tensor or a non-tensor type because
+    # the conditionals short-circuit.
+    fwd_gpu_devices = list(set(arg.get_device() for arg in args
+                               if isinstance(arg, torch.Tensor) and arg.is_cuda))
+
+    fwd_gpu_states = []
+    for device in fwd_gpu_devices:
+        with torch.cuda.device(device):
+            fwd_gpu_states.append(torch.cuda.get_rng_state())
+
+    return fwd_gpu_devices, fwd_gpu_states
+
+
+def set_device_states(devices, states):
+    for device, state in zip(devices, states):
+        with torch.cuda.device(device):
+            torch.cuda.set_rng_state(state)
