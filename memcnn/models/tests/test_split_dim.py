@@ -2,7 +2,7 @@
 import pytest
 import torch
 
-from memcnn import AdditiveCoupling, AffineCoupling, InvertibleModuleWrapper
+from memcnn import AdditiveCoupling, AffineAdapterNaive, AffineCoupling, InvertibleModuleWrapper
 
 
 class Check(torch.nn.Module):
@@ -16,13 +16,17 @@ class Check(torch.nn.Module):
         return fn_input
 
 
-@pytest.mark.parametrize('dimension', [None, 1, 2])
+@pytest.mark.parametrize('dimension', [None, 0, 1, 2])
 @pytest.mark.parametrize('coupling', [AdditiveCoupling, AffineCoupling])
 def test_split_dim(dimension, coupling):
+    input_size = (4, 8, 12)
     dim = 1 if dimension is None else dimension
-    module = Check(dim, 2)
-    model = (coupling(module) if dimension is None
-             else coupling(module, split_dim=dimension))
+    module = Check(dim, input_size[dim] // 2)
+    coupling_args = dict(adapter=AffineAdapterNaive) if coupling.__name__ == 'AffineCoupling' else dict()
+    if dimension is not None:
+        coupling_args["split_dim"] = dimension
+    model = coupling(module, **coupling_args)
     model = InvertibleModuleWrapper(model)
-    inp = torch.randn((2, 4, 4), requires_grad=False)
-    model(inp)
+    inp = torch.randn(input_size, requires_grad=False)
+    output = model(inp)
+    assert inp.shape == output.shape
