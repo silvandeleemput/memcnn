@@ -18,8 +18,8 @@ class Check(torch.nn.Module):
 
 @pytest.mark.parametrize('dimension', [None, 0, 1, 2])
 @pytest.mark.parametrize('coupling', [AdditiveCoupling, AffineCoupling])
-def test_split_dim(dimension, coupling):
-    input_size = (4, 8, 12)
+@pytest.mark.parametrize('input_size', [(2, 2, 2), (2, 4, 8, 12)])
+def test_split_dim(dimension, coupling, input_size):
     dim = 1 if dimension is None else dimension
     module = Check(dim, input_size[dim] // 2)
     coupling_args = dict(adapter=AffineAdapterNaive) if coupling.__name__ == 'AffineCoupling' else dict()
