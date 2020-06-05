@@ -6,7 +6,7 @@ from torch import set_grad_enabled
 
 
 class AdditiveCoupling(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1):
+    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1, split_dim=1):
         """
         This computes the output :math:`y` on forward given input :math:`x` and arbitrary modules :math:`Fm` and :math:`Gm` according to:
 
@@ -33,6 +33,9 @@ class AdditiveCoupling(nn.Module):
             implementation_bwd : :obj:`int`
                 Switch between different Additive Operation implementations for inverse pass. Default = -1
 
+            split_dim : :obj:`int`
+                Dimension to split the input tensors on. Default = 1, generally corresponding to channels.
+
         """
         super(AdditiveCoupling, self).__init__()
         # mirror the passed module, without parameter sharing...
@@ -42,6 +45,7 @@ class AdditiveCoupling(nn.Module):
         self.Fm = Fm
         self.implementation_fwd = implementation_fwd
         self.implementation_bwd = implementation_bwd
+        self.split_dim = split_dim
         if implementation_bwd != -1 or implementation_fwd != -1:
             warnings.warn("Other implementations than the default (-1) are now deprecated.",
                           DeprecationWarning)
@@ -54,13 +58,13 @@ class AdditiveCoupling(nn.Module):
         elif self.implementation_fwd == 1:
             out = AdditiveBlockFunction2.apply(*args)
         elif self.implementation_fwd == -1:
-            x1, x2 = torch.chunk(x, 2, dim=1)
+            x1, x2 = torch.chunk(x, 2, dim=self.split_dim)
             x1, x2 = x1.contiguous(), x2.contiguous()
             fmd = self.Fm.forward(x2)
             y1 = x1 + fmd
             gmd = self.Gm.forward(y1)
             y2 = x2 + gmd
-            out = torch.cat([y1, y2], dim=1)
+            out = torch.cat([y1, y2], dim=self.split_dim)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -74,13 +78,13 @@ class AdditiveCoupling(nn.Module):
         elif self.implementation_bwd == 1:
             x = AdditiveBlockInverseFunction2.apply(*args)
         elif self.implementation_bwd == -1:
-            y1, y2 = torch.chunk(y, 2, dim=1)
+            y1, y2 = torch.chunk(y, 2, dim=self.split_dim)
             y1, y2 = y1.contiguous(), y2.contiguous()
             gmd = self.Gm.forward(y1)
             x2 = y2 - gmd
             fmd = self.Fm.forward(x2)
             x1 = y1 - fmd
-            x = torch.cat([x1, x2], dim=1)
+            x = torch.cat([x1, x2], dim=self.split_dim)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))
