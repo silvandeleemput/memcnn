@@ -2,10 +2,15 @@
 History
 =======
 
+1.4.0 (2020-06-05)
+------------------
+* Added support for splitting on arbitrary dimensions to the Couplings. Big thanks to ClashLuke for the PR
+* Added a preserve_rng_state option to the InvertibleModuleWrapper
+
 1.3.2 (2020-03-05)
 ------------------
 * Improved InvertibleModuleWrapper
-  * Added support for multi input/output invertible operations! Big thanks to Christian Etmann for the PR.
+  * Added support for multi input/output invertible operations! Big thanks to Christian Etmann for the PR
 * Improved the is_invertible_module test
   * Added multi input/output checks
   * Fixed random seed per default
