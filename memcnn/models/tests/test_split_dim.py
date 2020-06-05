@@ -2,7 +2,7 @@
 import pytest
 import torch
 
-from memcnn import AdditiveCoupling, AffineAdapterNaive, AffineCoupling, InvertibleModuleWrapper
+from memcnn import AdditiveCoupling, AffineAdapterNaive, AffineCoupling
 
 
 class Check(torch.nn.Module):
@@ -26,7 +26,6 @@ def test_split_dim(dimension, coupling):
     if dimension is not None:
         coupling_args["split_dim"] = dimension
     model = coupling(module, **coupling_args)
-    model = InvertibleModuleWrapper(model)
     inp = torch.randn(input_size, requires_grad=False)
     output = model(inp)
     assert inp.shape == output.shape
