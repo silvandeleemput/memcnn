@@ -51,8 +51,8 @@ class AdditiveCoupling(nn.Module):
         self.implementation_fwd = implementation_fwd
         self.implementation_bwd = implementation_bwd
         self.split_dim = split_dim
-        self.input_crop = nn.Sequential() if input_size is None else CropPad(input_size)
-        self.output_crop = nn.Sequential() if output_size is None else CropPad(output_size)
+        self.input_crop = nn.Sequential() if input_size is None or len(input_size) != 2 else CropPad(*input_size)
+        self.output_crop = nn.Sequential() if output_size is None or len(input_size) != 2 else CropPad(*output_size)
         if implementation_bwd != -1 or implementation_fwd != -1:
             warnings.warn("Other implementations than the default (-1) are now deprecated.",
                           DeprecationWarning)
