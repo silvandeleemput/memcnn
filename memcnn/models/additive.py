@@ -4,9 +4,14 @@ import torch.nn as nn
 import copy
 from torch import set_grad_enabled
 
+try:
+    from utils import CropPad
+except ImportError:
+    from .utils import CropPad
+
 
 class AdditiveCoupling(nn.Module):
-    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1, split_dim=1):
+    def __init__(self, Fm, Gm=None, implementation_fwd=-1, implementation_bwd=-1, split_dim=1, input_size=None, target_size=None):
         """
         This computes the output :math:`y` on forward given input :math:`x` and arbitrary modules :math:`Fm` and :math:`Gm` according to:
 
@@ -46,6 +51,8 @@ class AdditiveCoupling(nn.Module):
         self.implementation_fwd = implementation_fwd
         self.implementation_bwd = implementation_bwd
         self.split_dim = split_dim
+        self.input_crop = nn.Sequential() if input_size is None else CropPad(input_size)
+        self.output_crop = nn.Sequential() if output_size is None else CropPad(output_size)
         if implementation_bwd != -1 or implementation_fwd != -1:
             warnings.warn("Other implementations than the default (-1) are now deprecated.",
                           DeprecationWarning)
@@ -58,6 +65,7 @@ class AdditiveCoupling(nn.Module):
         elif self.implementation_fwd == 1:
             out = AdditiveBlockFunction2.apply(*args)
         elif self.implementation_fwd == -1:
+            x = self.input_crop(x)
             x1, x2 = torch.chunk(x, 2, dim=self.split_dim)
             x1, x2 = x1.contiguous(), x2.contiguous()
             fmd = self.Fm.forward(x2)
@@ -65,6 +73,7 @@ class AdditiveCoupling(nn.Module):
             gmd = self.Gm.forward(y1)
             y2 = x2 + gmd
             out = torch.cat([y1, y2], dim=self.split_dim)
+            out = self.output_crop(out)
         else:
             raise NotImplementedError("Selected implementation ({}) not implemented..."
                                       .format(self.implementation_fwd))
@@ -78,6 +87,7 @@ class AdditiveCoupling(nn.Module):
         elif self.implementation_bwd == 1:
             x = AdditiveBlockInverseFunction2.apply(*args)
         elif self.implementation_bwd == -1:
+            y = self.output_crop.inverse(y)
             y1, y2 = torch.chunk(y, 2, dim=self.split_dim)
             y1, y2 = y1.contiguous(), y2.contiguous()
             gmd = self.Gm.forward(y1)
@@ -85,6 +95,7 @@ class AdditiveCoupling(nn.Module):
             fmd = self.Fm.forward(x2)
             x1 = y1 - fmd
             x = torch.cat([x1, x2], dim=self.split_dim)
+            x = self.input_crop.inverse(x)
         else:
             raise NotImplementedError("Inverse for selected implementation ({}) not implemented..."
                                       .format(self.implementation_bwd))
