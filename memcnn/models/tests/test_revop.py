@@ -6,7 +6,8 @@ import torch.nn
 import numpy as np
 import copy
 from memcnn.models.affine import AffineAdapterNaive, AffineAdapterSigmoid, AffineCoupling
-from memcnn.models.revop import InvertibleModuleWrapper, ReversibleBlock, create_coupling, is_invertible_module
+from memcnn.models.revop import InvertibleModuleWrapper, ReversibleBlock, create_coupling, \
+     is_invertible_module, get_device_states, set_device_states
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.tests.test_models import MultiplicationInverse, SubModule, SubModuleStack
 
@@ -25,6 +26,28 @@ def is_memory_cleared(var, isclear, shape):
         return var.storage().size() == 0
     else:
         return var.storage().size() > 0 and var.shape == shape
+
+
+@pytest.mark.parametrize('device', ['cpu', 'cuda'])
+@pytest.mark.parametrize('enabled', [True, False])
+def test_get_set_device_states(device, enabled):
+    shape = (1, 1, 10, 10)
+    if not torch.cuda.is_available() and device == 'cuda':
+        pytest.skip('This test requires a GPU to be available')
+    X = torch.ones(shape, device=device)
+    devices, states = get_device_states(X)
+    assert len(states) == (1 if device == 'cuda' else 0)
+    assert len(devices) == (1 if device == 'cuda' else 0)
+    cpu_rng_state = torch.get_rng_state()
+    Y = X * torch.rand(shape, device=device)
+    with torch.random.fork_rng(devices=devices, enabled=True):
+        if enabled:
+            if device == 'cpu':
+                torch.set_rng_state(cpu_rng_state)
+            else:
+                set_device_states(devices=devices, states=states)
+        Y2 = X * torch.rand(shape, device=device)
+    assert torch.equal(Y, Y2) == enabled
 
 
 @pytest.mark.parametrize('coupling', ['additive', 'affine'])
@@ -61,7 +84,8 @@ def test_reversible_block_notimplemented(coupling):
 @pytest.mark.parametrize('bwd', [False, True])
 @pytest.mark.parametrize('keep_input', [False, True])
 @pytest.mark.parametrize('keep_input_inverse', [False, True])
-def test_invertible_module_wrapper_fwd_bwd(fn, bwd, keep_input, keep_input_inverse):
+@pytest.mark.parametrize('preserve_rng_state', [False, True])
+def test_invertible_module_wrapper_fwd_bwd(fn, bwd, keep_input, keep_input_inverse, preserve_rng_state):
     """InvertibleModuleWrapper tests for the memory saving forward and backward passes
 
     * test inversion Y = RB(X) and X = RB.inverse(Y)
@@ -86,7 +110,9 @@ def test_invertible_module_wrapper_fwd_bwd(fn, bwd, keep_input, keep_input_inver
 
             Xshape = X.shape
 
-            rb = InvertibleModuleWrapper(fn=fn, keep_input=keep_input, keep_input_inverse=keep_input_inverse)
+            rb = InvertibleModuleWrapper(fn=fn, keep_input=keep_input,
+                                         keep_input_inverse=keep_input_inverse,
+                                         preserve_rng_state=preserve_rng_state)
             s_grad = [p.detach().clone() for p in rb.parameters()]
 
             rb.train()
