@@ -9,21 +9,20 @@ except TypeError:
     pytorch_version_one_and_above = True
 
 def _crop(inp, target_size):
+    inp_slice = []
     for t, s in zip(target_size, inp.size()):
         if t >= s:
-            inp_slice.append(':')
+            inp_slice.append(slice(None, None, None))
             continue
         removed = s - t
         left = removed//2
-        inp_slice.append('{:d}:{:d}'.format(left, removed-left))
-    if all(s == ':' for s in inp_slice):
+        inp_slice.append(slice(left, removed-left, None))
+    if all(s.start is None for s in inp_slice):
         return inp
-    inp_slice = 'inp[' + ':'.join(inp_slice) + ']'
-    inp_slice = eval(inp_slice)
-    return inp_slice
+    tensor_slice = inp.__getitem__(tuple(inp_slice))
+    return tensor_slice
     
 def _crop_pad(inp, target_size):
-    inp_slice = []
     size = inp.size()
     target_size = [s if t == -1 else t for s, t in zip(size, target_size)]
 
@@ -40,7 +39,6 @@ def _crop_pad(inp, target_size):
 
     output = torch.zeros(target_size, device=inp.device, dtype=inp.dtype)
     out_crop = _crop(output, inp_crop.size())
-    out_crop = inp_crop
 
     return output
     
@@ -52,6 +50,6 @@ class CropPad(torch.nn.Module):
     def forward(self, inp):
         return _crop_pad(inp, self.target_size)
     
-    def inverse(out):
+    def inverse(self, out):
         return _crop_pad(inp, self.input_size)
         
