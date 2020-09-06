@@ -19,7 +19,7 @@ def _crop(inp, target_size):
         inp_slice.append(slice(left, removed-left, None))
     if all(s.start is None for s in inp_slice):
         return inp
-    tensor_slice = inp.__getitem__(tuple(inp_slice))
+    tensor_slice = inp[*inp_slice]
     return tensor_slice
     
 def _crop_pad(inp, target_size):
