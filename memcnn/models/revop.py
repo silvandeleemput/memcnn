@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
-from memcnn.models.utils import pytorch_version_one_and_above
 
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
@@ -47,14 +46,9 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
 
         # clear memory from inputs
         if not ctx.keep_input:
-            if not pytorch_version_one_and_above:
-                # PyTorch 0.4 way to clear storage
-                for element in inputs:
-                    element.data.set_()
-            else:
-                # PyTorch 1.0+ way to clear storage
-                for element in inputs:
-                    element.storage().resize_(0)
+            # PyTorch 1.0+ way to clear storage
+            for element in inputs:
+                element.storage().resize_(0)
 
         # store these tensor nodes for backward pass
         ctx.inputs = [inputs] * num_bwd_passes
@@ -91,13 +85,9 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
                     inputs_inverted = ctx.fn_inverse(*outputs)
                     if not isinstance(inputs_inverted, tuple):
                         inputs_inverted = (inputs_inverted,)
-                    if pytorch_version_one_and_above:
-                        for element_original, element_inverted in zip(inputs, inputs_inverted):
-                            element_original.storage().resize_(int(np.prod(element_original.size())))
-                            element_original.set_(element_inverted)
-                    else:
-                        for element_original, element_inverted in zip(inputs, inputs_inverted):
-                            element_original.set_(element_inverted)
+                    for element_original, element_inverted in zip(inputs, inputs_inverted):
+                        element_original.storage().resize_(int(np.prod(element_original.size())))
+                        element_original.set_(element_inverted)
 
         # compute gradients
         with torch.set_grad_enabled(True):
