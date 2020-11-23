@@ -21,9 +21,9 @@ RUN usermod -a -G sudo user
 
 # Install necessary python libraries
 RUN python3.7 -m pip install pip --upgrade
-RUN python3.7 -m pip install torch===1.4.0
-RUN python3.7 -m pip install torchvision===0.5.0
+RUN python3.7 -m pip install pip install torch===1.7.0 torchvision===0.8.1 torchaudio===0.7.0 -f https://download.pytorch.org/whl/torch_stable.html
 RUN python3.7 -m pip install memcnn
+RUN python3.7 -m pip install pytest
 
 # Set MemCNN config file for user environement
 RUN python3.7 -c "import os, shutil, memcnn; path=os.path.join(os.path.dirname(memcnn.__file__), 'config'); shutil.copy(os.path.join(path, 'config.json.example'), os.path.join(path, 'config.json'));"
