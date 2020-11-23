@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
 import warnings
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.cuda.amp import custom_fwd, custom_bwd
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
+    @custom_fwd(cast_inputs=torch.float32)
     def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, preserve_rng_state, num_inputs, *inputs_and_weights):
         # store in context
         ctx.fn = fn
@@ -57,6 +58,7 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         return detached_outputs
 
     @staticmethod
+    @custom_bwd
     def backward(ctx, *grad_outputs):  # pragma: no cover
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
