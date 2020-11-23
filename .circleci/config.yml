@@ -22,7 +22,7 @@ jobs:
     parameters:
       tests:
         type: string
-        default: py27-torch04,py27-torch10,py27-torch11,py37-torch04,py37-torch10,py37-torch11,py37-torch14
+        default: py37-torch10,py37-torch11,py37-torch14,py37-torch17,py37-torchlatest
     <<: *container_python
     steps:
       - checkout
@@ -55,7 +55,7 @@ jobs:
     parameters:
       versions:
         type: string
-        default: "2.7 3.6 3.7"
+        default: "3.6 3.7"
     docker:
       - image: continuumio/miniconda3
     steps:
@@ -146,30 +146,6 @@ workflows:
   build_test_and_deploy:
     jobs:
       - testing:
-          name: testing_py27_torch04
-          tests: py27-torch04
-          filters:
-            tags:
-              only: /.*/
-      - testing:
-          name: testing_py27_torch10
-          tests: py27-torch10
-          filters:
-            tags:
-              only: /.*/
-      - testing:
-          name: testing_py27_torch11
-          tests: py27-torch11
-          filters:
-            tags:
-              only: /.*/
-      - testing:
-          name: testing_py37_torch04
-          tests: py37-torch04
-          filters:
-            tags:
-              only: /.*/
-      - testing:
           name: testing_py37_torch10
           tests: py37-torch10
           filters:
@@ -187,25 +163,25 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - testing:
+          name: testing_py37_torch17
+          tests: py37-torch17
+          filters:
+            tags:
+              only: /.*/
+      - testing:
+          name: testing_py37_torchlatest
+          tests: py37-torchlatest
+          filters:
+            tags:
+              only: /.*/
       - deploy:
           requires:
-            - testing_py27_torch04
-            - testing_py27_torch10
-            - testing_py27_torch11
-            - testing_py37_torch04
             - testing_py37_torch10
             - testing_py37_torch11
             - testing_py37_torch14
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
-      - conda_deploy:
-          name: conda_deploy_py27
-          versions: "2.7"
-          requires:
-            - deploy
+            - testing_py37_torch17
+            - testing_py37_torchlatest
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/

@@ -1,4 +1,5 @@
 * MemCNN version:
+* PyTorch version:
 * Python version:
 * Operating System:
 
