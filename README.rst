@@ -59,7 +59,7 @@ Features
 * Simple toggling of memory saving by setting the `keep_input` property of the `InvertibleModuleWrapper`.
 * Turn arbitrary non-linear PyTorch functions into invertible versions using the `AdditiveCoupling` or the `AffineCoupling` classes.
 * Training and evaluation code for reproducing RevNet experiments using MemCNN.
-* CI tests for Python v2.7 and v3.7 and torch v0.4, v1.0, v1.1, and v1.4 with good code coverage.
+* CI tests for Python v3.7 and torch v1.0, v1.1, v1.4 and v1.7 with good code coverage.
 
 Examples
 --------
