@@ -1,14 +1,27 @@
-# -*- coding: utf-8 -*-
+import functools
 import warnings
 import numpy as np
 import torch
 import torch.nn as nn
+
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
+
+try:
+    from torch.cuda.amp import custom_fwd, custom_bwd
+except ModuleNotFoundError:
+    def custom_fwd(fwd=None, *, cast_inputs=None):
+        if fwd is None:
+            return functools.partial(custom_fwd)
+        return functools.partial(fwd)
+
+    def custom_bwd(bwd):
+        return functools.partial(bwd)
 
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
     @staticmethod
+    @custom_fwd(cast_inputs=torch.float32)
     def forward(ctx, fn, fn_inverse, keep_input, num_bwd_passes, preserve_rng_state, num_inputs, *inputs_and_weights):
         # store in context
         ctx.fn = fn
@@ -57,6 +70,7 @@ class InvertibleCheckpointFunction(torch.autograd.Function):
         return detached_outputs
 
     @staticmethod
+    @custom_bwd
     def backward(ctx, *grad_outputs):  # pragma: no cover
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("InvertibleCheckpointFunction is not compatible with .grad(), please use .backward() if possible")
@@ -138,7 +152,7 @@ class InvertibleModuleWrapper(nn.Module):
 
             disable : :obj:`bool`, optional
                 This will disable using the InvertibleCheckpointFunction altogether.
-                Essentially this renders the function as `y = fn(x)` without any of the memory savings.
+                Essentially this renders the function as :math:`y = fn(x)` without any of the memory savings.
                 Setting this to true will also ignore the keep_input and keep_input_inverse properties.
 
             preserve_rng_state : :obj:`bool`, optional
@@ -156,6 +170,13 @@ class InvertibleModuleWrapper(nn.Module):
             keep_input_inverse : :obj:`bool`, optional
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
+
+        Note
+        ----
+            The InvertibleModuleWrapper can be used with mixed-precision training using
+            :obj:`torch.cuda.amp.autocast` as of torch v1.6 and above. However, inputs will always be cast
+            to :obj:`torch.float32` internally. This is done to minimize autocasting inputs to a different datatype
+            which usually results in a disconnected computation graph and will raise an error on the backward pass.
 
         """
         super(InvertibleModuleWrapper, self).__init__()
