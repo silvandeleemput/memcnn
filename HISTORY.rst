@@ -2,6 +2,13 @@
 History
 =======
 
+1.5.0 (2020-11-24)
+------------------
+* Added support for mixed-precision training using torch.cuda.amp (inputs fixed to float32 for now)
+* Added support for PyTorch v1.7
+* Dropped support for PyTorch < v1.0 and Python 2
+* Removed the version limit for Pillow in the requirements
+
 1.4.0 (2020-06-05)
 ------------------
 * Added support for splitting on arbitrary dimensions to the Couplings. Big thanks to ClashLuke for the PR
