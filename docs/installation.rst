@@ -7,9 +7,8 @@ Installation
 Requirements
 ------------
 
--  `Python <https://python.org/>`__ 2.7 or 3.5+
--  `PyTorch <http://pytorch.org/>`__ 1.1 (0.4 downwards compatible, CUDA
-   support recommended)
+-  `Python <https://python.org/>`__ 3.6+
+-  `PyTorch <http://pytorch.org/>`__ 1.0+ (CUDA support recommended)
 
 
 Stable release
