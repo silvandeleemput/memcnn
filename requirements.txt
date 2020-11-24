@@ -1,4 +1,3 @@
-Pillow<7.0.0
 numpy
 SimpleITK
 torch>=1.0.0

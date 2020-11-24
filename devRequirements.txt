@@ -1,10 +1,4 @@
-Pillow<7.0.0
-numpy
-SimpleITK
-torch>=1.0.0
-torchvision
-tqdm
-pathlib2
+-r requirements.txt
 bumpversion
 wheel
 watchdog
