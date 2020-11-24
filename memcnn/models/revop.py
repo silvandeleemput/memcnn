@@ -1,5 +1,4 @@
 import functools
-
 import warnings
 import numpy as np
 import torch
@@ -153,7 +152,7 @@ class InvertibleModuleWrapper(nn.Module):
 
             disable : :obj:`bool`, optional
                 This will disable using the InvertibleCheckpointFunction altogether.
-                Essentially this renders the function as `y = fn(x)` without any of the memory savings.
+                Essentially this renders the function as :math:`y = fn(x)` without any of the memory savings.
                 Setting this to true will also ignore the keep_input and keep_input_inverse properties.
 
             preserve_rng_state : :obj:`bool`, optional
@@ -171,6 +170,13 @@ class InvertibleModuleWrapper(nn.Module):
             keep_input_inverse : :obj:`bool`, optional
                 Set to retain the input information on inverse, by default it can be discarded since it will be
                 reconstructed upon the backward pass.
+
+        Note
+        ----
+            The InvertibleModuleWrapper can be used with mixed-precision training using
+            :obj:`torch.cuda.amp.autocast` as of torch v1.6 and above. However, inputs will always be cast
+            to :obj:`torch.float32` internally. This is done to minimize autocasting inputs to a different datatype
+            which usually results in a disconnected computation graph and will raise an error on the backward pass.
 
         """
         super(InvertibleModuleWrapper, self).__init__()
