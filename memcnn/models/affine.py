@@ -35,8 +35,8 @@ class AffineAdapterSigmoid(nn.Module):
     def forward(self, x):
         h = self.f(x)
         assert h.shape[1] % 2 == 0  # nosec
-        scale = torch.sigmoid(h[:, 1::2, :] + 2.0)
-        shift = h[:, 0::2, :]
+        scale = torch.sigmoid(h[:, 1::2] + 2.0)
+        shift = h[:, 0::2]
         return scale, shift
 
 
