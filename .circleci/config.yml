@@ -10,9 +10,6 @@ aliases:
       command: |
         sudo apt-get update
         sudo apt install -y build-essential libssl-dev libpython-dev python python-pip
-        sudo apt-get remove python-pip
-        sudo easy_install pip
-        sudo ln -s /usr/local/bin/pip /usr/bin/pip
         sudo -H pip install --upgrade pip tox virtualenv
 
 orbs:
