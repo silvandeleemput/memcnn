@@ -2,6 +2,11 @@
 History
 =======
 
+1.5.1 (2021-08-07)
+------------------
+* Added support for 2-dimensional inputs for AffineAdapterSigmoid
+* Fixed CI issues
+
 1.5.0 (2020-11-24)
 ------------------
 * Added support for mixed-precision training using torch.cuda.amp (inputs fixed to float32 for now)
