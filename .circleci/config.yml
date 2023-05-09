@@ -2,7 +2,7 @@ version: 2.1
 aliases:
   - &container_python
     docker:
-      - image: circleci/python:3.7  # primary container for the build job
+      - image: cimg/python:3.8.4  # primary container for the build job
 
   - &run_task_install_tox_dependencies
     run:
@@ -19,7 +19,7 @@ jobs:
     parameters:
       tests:
         type: string
-        default: py37-torch10,py37-torch11,py37-torch14,py37-torch17,py37-torchlatest
+        default: py38-torch10,py38-torch11,py38-torch14,py38-torch17,py38-torchlatest
     <<: *container_python
     steps:
       - checkout
@@ -52,7 +52,7 @@ jobs:
     parameters:
       versions:
         type: string
-        default: "3.6 3.7"
+        default: "3.7 3.8"
     docker:
       - image: continuumio/miniconda3
     steps:
@@ -91,7 +91,7 @@ jobs:
             done
   deploy:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.8.4
     steps:
       - checkout
       - restore_cache:
@@ -144,52 +144,42 @@ workflows:
   build_test_and_deploy:
     jobs:
       - testing:
-          name: testing_py37_torch10
-          tests: py37-torch10
+          name: testing_py38_torch10
+          tests: py38-torch10
           filters:
             tags:
               only: /.*/
       - testing:
-          name: testing_py37_torch11
-          tests: py37-torch11
+          name: testing_py38_torch11
+          tests: py38-torch11
           filters:
             tags:
               only: /.*/
       - testing:
-          name: testing_py37_torch14
-          tests: py37-torch14
+          name: testing_py38_torch14
+          tests: py38-torch14
           filters:
             tags:
               only: /.*/
       - testing:
-          name: testing_py37_torch17
-          tests: py37-torch17
+          name: testing_py38_torch17
+          tests: py38-torch17
           filters:
             tags:
               only: /.*/
       - testing:
-          name: testing_py37_torchlatest
-          tests: py37-torchlatest
+          name: testing_py38_torchlatest
+          tests: py38-torchlatest
           filters:
             tags:
               only: /.*/
       - deploy:
           requires:
-            - testing_py37_torch10
-            - testing_py37_torch11
-            - testing_py37_torch14
-            - testing_py37_torch17
-            - testing_py37_torchlatest
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
-      - conda_deploy:
-          name: conda_deploy_py36
-          requires:
-            - deploy
-          versions: "3.6"
+            - testing_py38_torch10
+            - testing_py38_torch11
+            - testing_py38_torch14
+            - testing_py38_torch17
+            - testing_py38_torchlatest
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/
@@ -200,6 +190,16 @@ workflows:
           requires:
             - deploy
           versions: "3.7"
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - conda_deploy:
+          name: conda_deploy_py38
+          requires:
+            - deploy
+          versions: "3.8"
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/
