@@ -144,18 +144,6 @@ workflows:
   build_test_and_deploy:
     jobs:
       - testing:
-          name: testing_py38_torch10
-          tests: py38-torch10
-          filters:
-            tags:
-              only: /.*/
-      - testing:
-          name: testing_py38_torch11
-          tests: py38-torch11
-          filters:
-            tags:
-              only: /.*/
-      - testing:
           name: testing_py38_torch14
           tests: py38-torch14
           filters:
@@ -175,8 +163,6 @@ workflows:
               only: /.*/
       - deploy:
           requires:
-            - testing_py38_torch10
-            - testing_py38_torch11
             - testing_py38_torch14
             - testing_py38_torch17
             - testing_py38_torchlatest
