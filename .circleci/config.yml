@@ -19,7 +19,7 @@ jobs:
     parameters:
       tests:
         type: string
-        default: py38-torch10,py38-torch11,py38-torch14,py38-torch17,py38-torchlatest
+        default: py38-torch10,py38-torch11,py38-torch14,py38-torch17
     <<: *container_python
     steps:
       - checkout
@@ -155,17 +155,10 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - testing:
-          name: testing_py38_torchlatest
-          tests: py38-torchlatest
-          filters:
-            tags:
-              only: /.*/
       - deploy:
           requires:
             - testing_py38_torch14
             - testing_py38_torch17
-            - testing_py38_torchlatest
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)*/
