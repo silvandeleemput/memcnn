@@ -2,6 +2,11 @@
 History
 =======
 
+1.5.2 (2023-05-10)
+------------------
+* Fixed issue with CIFAR data loaders not being able to be pickled because of local Lambda operations
+* Fixed CI issues, disabled PyTorch v1.0, v1.1, and latest checks
+
 1.5.1 (2021-08-07)
 ------------------
 * Added support for 2-dimensional inputs for AffineAdapterSigmoid
