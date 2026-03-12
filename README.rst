@@ -4,6 +4,7 @@ MemCNN
 
 .. image:: https://img.shields.io/badge/maintenance-unmaintained-red.svg
         :alt: Unmaintained!
+        :target: https://github.com/silvandeleemput/memcnn
 
 .. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg        
         :alt: CircleCI - Status master branch
