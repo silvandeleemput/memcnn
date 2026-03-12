@@ -7,16 +7,25 @@ import torch.nn as nn
 from memcnn.models.additive import AdditiveCoupling
 from memcnn.models.affine import AffineCoupling
 
+
 try:
-    from torch.cuda.amp import custom_fwd, custom_bwd
-except ModuleNotFoundError:
-    def custom_fwd(fwd=None, *, cast_inputs=None):
+    import torch.amp
+    def custom_fwd(fwd=None, *, cast_inputs=None, device_type='cuda'):
         if fwd is None:
-            return functools.partial(custom_fwd)
+            return functools.partial(custom_fwd, cast_inputs=cast_inputs, device_type=device_type)
+        return torch.amp.custom_fwd(fwd, cast_inputs=cast_inputs, device_type=device_type)
+    def custom_bwd(bwd, device_type='cuda'):
+        return torch.amp.custom_bwd(bwd, device_type=device_type)
+
+except ModuleNotFoundError:
+    def custom_fwd(fwd=None, *, cast_inputs=None, device_type='cuda'):
+        if fwd is None:
+            return functools.partial(custom_fwd, cast_inputs=cast_inputs, device_type=device_type)
         return functools.partial(fwd)
 
-    def custom_bwd(bwd):
-        return functools.partial(bwd)
+    def custom_bwd(bwd, device_type='cuda'):
+        return functools.partial(bwd, device_type=device_type)
+
 
 
 class InvertibleCheckpointFunction(torch.autograd.Function):
