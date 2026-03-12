@@ -2,14 +2,6 @@
 MemCNN
 ======
 
-⚠️ Project Status: Unmaintained
-
-This repository is no longer actively maintained.
-
-The code is kept available for reference and historical purposes, but no new features, bug fixes, or support should be expected.
-
-If you find the project useful, feel free to fork it and continue development.
-
 .. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg        
         :alt: CircleCI - Status master branch
         :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
@@ -59,6 +51,14 @@ A `PyTorch <http://pytorch.org/>`__ framework for developing memory-efficient in
 * Free software: `MIT license <https://github.com/silvandeleemput/memcnn/blob/master/LICENSE.txt>`__ (please cite our work if you use it)
 * Documentation: https://memcnn.readthedocs.io.
 * Installation: https://memcnn.readthedocs.io/en/latest/installation.html
+
+⚠️ Project Status: Unmaintained
+
+This repository is no longer actively maintained.
+
+The code is kept available for reference and historical purposes, but no new features, bug fixes, or support should be expected.
+
+If you find the project useful, feel free to fork it and continue development.
 
 Features
 --------
