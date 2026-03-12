@@ -2,13 +2,12 @@
 MemCNN
 ======
 
+.. image:: https://img.shields.io/badge/maintenance-unmaintained-red.svg
+        :alt: Unmaintained!
+
 .. image:: https://img.shields.io/circleci/build/github/silvandeleemput/memcnn/master.svg        
         :alt: CircleCI - Status master branch
         :target: https://circleci.com/gh/silvandeleemput/memcnn/tree/master
-
-.. image:: https://img.shields.io/docker/cloud/build/silvandeleemput/memcnn.svg
-        :alt: Docker - Status
-        :target: https://hub.docker.com/r/silvandeleemput/memcnn
 
 .. image:: https://readthedocs.org/projects/memcnn/badge/?version=latest        
         :alt: Documentation - Status master branch
